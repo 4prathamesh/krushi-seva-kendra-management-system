@@ -7,10 +7,19 @@ import Dashboard from '../pages/Dashboard';
 import Products from '../pages/Products';
 import Orders from '../pages/Orders';
 import Customers from '../pages/Customers';
+import Profile        from '../pages/Profile';
+import UserManagement from '../pages/UserManagement';
 
 const PrivateRoute = ({ children }) => {
   const { token } = useSelector((state) => state.auth);
   return token ? children : <Navigate to="/login" replace />;
+};
+
+const AdminRoute = ({ children }) => {
+  const { token, user } = useSelector((state) => state.auth);
+  if (!token) return <Navigate to="/login" replace />;
+  if (user?.role !== 'admin') return <Navigate to="/" replace />;
+  return children;
 };
 
 const AppRoutes = () => {
@@ -29,6 +38,15 @@ const AppRoutes = () => {
         <Route path="products" element={<Products />} />
         <Route path="orders" element={<Orders />} />
         <Route path="customers" element={<Customers />} />
+        <Route path="profile"   element={<Profile />} />
+        <Route
+          path="users"
+          element={
+            <AdminRoute>
+              <UserManagement />
+            </AdminRoute>
+          }
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

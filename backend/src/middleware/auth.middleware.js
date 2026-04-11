@@ -13,7 +13,7 @@ const protect = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     const user = await User.findById(decoded.id).select('-password');
-    console.log('Decoded user: ', user);
+    
     if (!user || !user.isActive) {
       return sendError(res, 401, 'User not found or deactivated');
     }
@@ -27,7 +27,7 @@ const protect = async (req, res, next) => {
 
 const authorizeRoles = (...roles) => {
   return (req, res, next) => {
-    console.log('user role: ', req.body);
+    
     if (!roles.includes(req.body.role || req.user.role)) {
       return sendError(res, 403, `Access denied. Required roles: ${roles.join(', ')}`);
     }

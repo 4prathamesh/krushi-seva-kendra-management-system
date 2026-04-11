@@ -85,4 +85,37 @@ const changePassword = async (req, res, next) => {
   }
 };
 
-module.exports = { register, login, getMe, changePassword };
+
+// @desc    Get all users (admin only)
+// @route   GET /api/auth/users
+// @access  Admin
+const getAllUsers = async (req, res, next) => {
+  try {
+    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    return sendSuccess(res, 200, 'Users fetched', { users });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Toggle user active status (admin only)
+// @route   PUT /api/auth/users/:id
+// @access  Admin
+const updateUser = async (req, res, next) => {
+  try {
+    if (req.params.id === req.user._id.toString()) {
+      return sendError(res, 400, 'You cannot modify your own account status');
+    }
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isActive: req.body.isActive },
+      { new: true }
+    ).select('-password');
+    if (!user) return sendError(res, 404, 'User not found');
+    return sendSuccess(res, 200, 'User updated', { user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { register, login, getMe, changePassword, getAllUsers, updateUser };
