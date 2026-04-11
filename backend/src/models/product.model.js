@@ -41,6 +41,14 @@ const productSchema = new mongoose.Schema(
       default: STOCK_STATUS.IN_STOCK,
     },
     imageUrl: { type: String },
+    
+    // ── NEW: GST / billing fields ─────────────────────────────────────────────
+    hsn:     { type: String, trim: true, default: '' },  // HSN / SAC code
+    gstRate: { type: Number, default: 0, min: 0, max: 100 }, // e.g. 12, 18
+    batch:   { type: String, trim: true, default: '' },  // current batch number
+    expiry:  { type: String, trim: true, default: '' },  // e.g. "Feb 2026"
+    // ─────────────────────────────────────────────────────────────────────────
+
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

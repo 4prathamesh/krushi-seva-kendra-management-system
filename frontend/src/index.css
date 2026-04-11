@@ -7,3 +7,40 @@
     @apply bg-gray-50 text-gray-900 font-sans;
   }
 }
+
+/* ── Print Styles ─────────────────────────────────────────────────────────────
+   When window.print() is called (via InvoicePrint.jsx's popup window),
+   the invoice-page div fills the entire page cleanly.
+   The .print:hidden class on the control bar ensures only the invoice renders.
+────────────────────────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide everything that is not the invoice */
+  body > *:not(.invoice-print-root) {
+    display: none !important;
+  }
+
+  /* Reset page margins */
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  /* Ensure the invoice fills the page */
+  .invoice-page {
+    width: 100% !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide the control bar (Print / Close buttons) */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Preserve background colours in print (for table header etc.) */
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

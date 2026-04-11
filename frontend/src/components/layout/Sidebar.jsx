@@ -6,6 +6,8 @@ const Sidebar = () => {
 
   const navItems = [
     { to: '/',          label: '📊 Dashboard',  end: true },
+    { to: '/billing',   label: '🧾 New Invoice' },
+    { to: '/invoices',  label: '📋 Invoices' },
     { to: '/products',  label: '🌱 Products' },
     { to: '/orders',    label: '📦 Orders' },
     { to: '/customers', label: '👨‍🌾 Customers' },

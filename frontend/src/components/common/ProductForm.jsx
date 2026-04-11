@@ -21,6 +21,10 @@ const EMPTY_FORM = {
   pricePerUnit: '',
   stock: '',
   lowStockThreshold: '10',
+  hsn:     '',   // HSN/SAC code shown on the invoice
+  gstRate: '0',  // GST % (0, 5, 12, 18, 28)
+  batch:   '',   // batch number for the current stock
+  expiry:  '',   // expiry date string, e.g. "Feb 2026"
 };
 
 // ─── Validation ───────────────────────────────────────────────────────────────
@@ -70,6 +74,10 @@ const ProductForm = ({ isOpen, onClose, product = null }) => {
           pricePerUnit: String(product.pricePerUnit ?? ''),
           stock: String(product.stock ?? ''),
           lowStockThreshold: String(product.lowStockThreshold ?? '10'),
+          hsn:     product.hsn     || '',
+          gstRate: String(product.gstRate ?? '0'),
+          batch:   product.batch   || '',
+          expiry:  product.expiry  || '',
         });
         setImagePreview(product.imageUrl || null);
       } else {
@@ -230,6 +238,48 @@ const ProductForm = ({ isOpen, onClose, product = null }) => {
           onChange={handleChange}
           placeholder="Optional product description..."
         />
+
+        {/* ── GST / Billing Fields ───────────────────────────────────── */}
+        <div className="border-t border-gray-100 pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
+            GST &amp; Billing Info
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label="HSN / SAC Code"
+              name="hsn"
+              value={form.hsn}
+              onChange={handleChange}
+              placeholder="e.g. 2525"
+            />
+            <Select
+              label="GST Rate (%)"
+              name="gstRate"
+              value={form.gstRate}
+              onChange={handleChange}
+            >
+              {[0, 5, 12, 18, 28].map((r) => (
+                <option key={r} value={r}>{r}%</option>
+              ))}
+            </Select>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+            <Input
+              label="Batch Number"
+              name="batch"
+              value={form.batch}
+              onChange={handleChange}
+              placeholder="e.g. WE/854"
+            />
+            <Input
+              label="Expiry Date"
+              name="expiry"
+              value={form.expiry}
+              onChange={handleChange}
+              placeholder="e.g. Feb 2026"
+            />
+          </div>
+        </div>
 
         {/* Image Upload */}
         <div className="flex flex-col gap-1">
