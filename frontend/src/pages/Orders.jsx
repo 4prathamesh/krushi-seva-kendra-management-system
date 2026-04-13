@@ -42,6 +42,7 @@ const FilterPills = ({ value, onChange, options }) => (
 const Orders = () => {
   const dispatch = useDispatch();
   const { items: orders, loading, pagination } = useSelector((s) => s.orders);
+  const { user } = useSelector((s) => s.auth);
 
   const [page, setPage]                   = useState(1);
   const [statusFilter, setStatusFilter]   = useState('');
@@ -210,7 +211,9 @@ const Orders = () => {
                           Paid ✓
                         </Button>
                       )}
-                      {o.orderStatus !== 'cancelled' && o.orderStatus !== 'delivered' && (
+                      {user?.role === 'admin' &&
+                        o.orderStatus !== 'cancelled' &&
+                        o.orderStatus !== 'delivered' && (
                         <Button variant="danger" className="py-1 px-2 text-xs" onClick={() => handleCancel(o._id, o.orderNumber)}>
                           Cancel
                         </Button>

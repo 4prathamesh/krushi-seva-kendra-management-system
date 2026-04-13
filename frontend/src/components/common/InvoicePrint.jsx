@@ -36,10 +36,16 @@ const fmtDate = (dateStr) => {
  */
 const InvoicePrint = ({ invoice, onClose }) => {
   const printRef = useRef(null);
+  const [popupBlocked, setPopupBlocked] = useState(false);
 
   const handlePrint = () => {
     // Open a new window with just the invoice HTML — avoids React portal issues
     const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      setPopupBlocked(true);
+      return;
+    }
+    setPopupBlocked(false);
     const content     = printRef.current.innerHTML;
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -215,25 +221,40 @@ const InvoicePrint = ({ invoice, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-y-auto py-8 px-4">
       {/* Control bar — hidden on print */}
-      <div className="w-full max-w-4xl mb-4 flex items-center justify-between bg-white rounded-xl px-5 py-3 shadow-md print:hidden">
-        <div>
-          <h3 className="font-semibold text-gray-800">Invoice Preview</h3>
-          <p className="text-xs text-gray-500">{invoice.invoiceNumber}</p>
+      <div className="w-full max-w-4xl mb-4 flex flex-col gap-2 print:hidden">
+        <div className="flex items-center justify-between bg-white rounded-xl px-5 py-3 shadow-md">
+          <div>
+            <h3 className="font-semibold text-gray-800">Invoice Preview</h3>
+            <p className="text-xs text-gray-500">{invoice.invoiceNumber}</p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium"
+            >
+              ✕ Close
+            </button>
+            <button
+              onClick={handlePrint}
+              className="px-5 py-2 rounded-lg text-sm bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2"
+            >
+              🖨️ Print Invoice
+            </button>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium"
-          >
-            ✕ Close
-          </button>
-          <button
-            onClick={handlePrint}
-            className="px-5 py-2 rounded-lg text-sm bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2"
-          >
-            🖨️ Print Invoice
-          </button>
-        </div>
+
+        {popupBlocked && (
+          <div className="bg-yellow-50 border border-yellow-300 rounded-xl px-5 py-3 text-sm text-yellow-800 flex items-start gap-3">
+            <span className="text-xl shrink-0">⚠️</span>
+            <div>
+              <p className="font-semibold">Popup blocked by your browser</p>
+              <p className="mt-0.5">
+                Please allow popups for this site and click <strong>Print Invoice</strong> again.
+                In most browsers: click the popup-blocked icon in the address bar → <em>Always allow</em>.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── A4 Invoice Layout ── */}

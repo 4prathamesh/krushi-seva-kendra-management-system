@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { fetchInvoices, cancelInvoice } from '../features/invoices/invoiceSlice';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -15,7 +16,9 @@ const PAY_BADGE = {
 
 const Invoices = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { items: invoices, loading, pagination } = useSelector((s) => s.invoices);
+  const { user } = useSelector((s) => s.auth );
 
   const [page, setPage]       = useState(1);
   const [search, setSearch]   = useState('');
@@ -55,6 +58,14 @@ const Invoices = () => {
     try {
       await dispatch(cancelInvoice({ id, reason: 'Cancelled by admin' })).unwrap();
       toast.success(`Invoice ${invoiceNumber} cancelled — stock restored`);
+      dispatch(fetchInvoices({
+        page,
+        limit: 20,
+        search:      search      || undefined,
+        paymentMode: payFilter   || undefined,
+        from:        fromDate    || undefined,
+        to:          toDate      || undefined,
+      }));
     } catch (err) {
       toast.error(err || 'Failed to cancel invoice');
     }
@@ -71,12 +82,9 @@ const Invoices = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-800">🧾 Invoices</h2>
-          <a
-            href="/billing"
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors"
-          >
+          <Button onClick={() => navigate('/billing')}>
             + New Invoice
-          </a>
+          </Button>
         </div>
 
         {/* Filters */}
@@ -174,13 +182,15 @@ const Invoices = () => {
                         >
                           🖨️ Print
                         </Button>
-                        <Button
-                          variant="danger"
-                          className="py-1 px-2 text-xs"
-                          onClick={() => handleCancel(inv._id, inv.invoiceNumber)}
-                        >
-                          Cancel
-                        </Button>
+                        {user?.role === 'admin' && (
+                          <Button
+                            variant="danger"
+                            className="py-1 px-2 text-xs"
+                            onClick={() => handleCancel(inv._id, inv.invoiceNumber)}
+                          >
+                            Cancel
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

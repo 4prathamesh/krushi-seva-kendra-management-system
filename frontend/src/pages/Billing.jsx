@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { createInvoice } from '../features/invoices/invoiceSlice';
 import Input from '../components/common/Input';
-import Select from '../components/common/Select';
 import Button from '../components/common/Button';
 import InvoicePrint from '../components/common/InvoicePrint';
 import api from '../services/api';
@@ -24,7 +23,7 @@ const calcLine = (price, qty, gstRate) => {
 };
 
 // ─── Validation ───────────────────────────────────────────────────────────────
-const validate = (form, items) => {
+const validate = (form, items, products) => {
   const errs = {};
   if (!form.customerName.trim()) errs.customerName = 'Customer name is required';
   if (!form.mobile.trim()) {
@@ -38,6 +37,12 @@ const validate = (form, items) => {
     if (!item.productId) e.productId = 'Select a product';
     if (!item.quantity || Number(item.quantity) < 1) e.quantity = 'Min 1';
     if (!item.price || Number(item.price) < 0) e.price = 'Invalid price';
+    if (item.productId && item.quantity) {
+      const prod = products.find((p) => p._id === item.productId);
+      if (prod && Number(item.quantity) > prod.stock) {
+        e.quantity = `Max ${prod.stock} (available stock)`;
+      }
+    }
     return e;
   });
   if (itemErrs.some((e) => Object.keys(e).length > 0)) errs.itemErrs = itemErrs;
@@ -283,7 +288,7 @@ const Billing = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const filledItems = items.filter((i) => i.productId); // ignore blank rows
-    const errs = validate({ customerName, mobile }, filledItems);
+    const errs = validate({ customerName, mobile }, filledItems, products);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     setSubmit(true);

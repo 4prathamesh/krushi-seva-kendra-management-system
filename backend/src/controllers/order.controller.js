@@ -41,7 +41,8 @@ const getOrderById = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate('customer', 'name phone village')
-      .populate('items.product', 'name unit category');
+      .populate('items.product', 'name unit category')
+      .populate('createdBy', 'name');
     if (!order) return sendError(res, 404, 'Order not found');
     return sendSuccess(res, 200, 'Order fetched', { order });
   } catch (error) {
