@@ -15,54 +15,56 @@ import customerService from '../../services/customer.service';
  *   customer  {object | null}   — customer object (needs _id and name)
  */
 
-const STATUS_BADGE = {
-  pending:    'bg-yellow-100 text-yellow-700',
-  confirmed:  'bg-blue-100 text-blue-700',
-  dispatched: 'bg-purple-100 text-purple-700',
-  delivered:  'bg-green-100 text-green-700',
-  cancelled:  'bg-red-100 text-red-700',
-};
 const PAY_BADGE = {
-  unpaid:  'bg-red-100 text-red-600',
-  partial: 'bg-yellow-100 text-yellow-600',
-  paid:    'bg-green-100 text-green-600',
+  cash: 'bg-green-100 text-green-700',
+  upi:  'bg-blue-100 text-blue-700',
+  card: 'bg-purple-100 text-purple-700',
+};
+
+const STATUS_BADGE = {
+  paid:      'bg-green-100 text-green-700',
+  draft:     'bg-yellow-100 text-yellow-700',
+  cancelled: 'bg-red-100 text-red-700',
 };
 
 const CustomerOrderHistory = ({ isOpen, onClose, customer }) => {
-  const [orders, setOrders]   = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
 
   useEffect(() => {
     if (!isOpen || !customer?._id) return;
-    const fetch = async () => {
+    const load = async () => {
       setLoading(true);
       setError('');
       try {
-        const data = await customerService.getOrders(customer._id);
-        setOrders(data.orders || []);
+        // Calls GET /customers/:id/invoices (refactored from /orders)
+        const data = await customerService.getInvoices(customer._id);
+        setInvoices(data.invoices || []);
       } catch {
-        setError('Failed to load order history');
+        setError('Failed to load invoice history');
       } finally {
         setLoading(false);
       }
     };
-    fetch();
+    load();
   }, [isOpen, customer]);
 
-  const totalSpent = orders
-    .filter((o) => o.orderStatus !== 'cancelled')
-    .reduce((sum, o) => sum + (o.finalAmount || 0), 0);
+  const totalSpent = invoices
+    .filter((inv) => !inv.isCancelled)
+    .reduce((sum, inv) => sum + (inv.grandTotal || 0), 0);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`📋 Order History — ${customer?.name || ''}`}
+      title={`📋 Invoice History — ${customer?.name || ''}`}
       size="lg"
     >
       {loading && (
-        <div className="flex items-center justify-center py-16 text-gray-400">Loading...</div>
+        <div className="flex items-center justify-center py-16 text-gray-400">
+          Loading...
+        </div>
       )}
       {error && (
         <div className="text-center py-10 text-red-500">{error}</div>
@@ -70,12 +72,24 @@ const CustomerOrderHistory = ({ isOpen, onClose, customer }) => {
 
       {!loading && !error && (
         <>
-          {/* Summary row */}
+          {/* Summary cards */}
           <div className="grid grid-cols-3 gap-3 mb-5">
             {[
-              { label: 'Total Orders', value: orders.length, color: 'text-blue-700 bg-blue-50' },
-              { label: 'Total Spent', value: `₹${totalSpent.toLocaleString('en-IN')}`, color: 'text-green-700 bg-green-50' },
-              { label: 'Pending', value: orders.filter((o) => o.orderStatus === 'pending').length, color: 'text-yellow-700 bg-yellow-50' },
+              {
+                label: 'Total Invoices',
+                value: invoices.length,
+                color: 'text-blue-700 bg-blue-50',
+              },
+              {
+                label: 'Total Spent',
+                value: `₹${totalSpent.toLocaleString('en-IN')}`,
+                color: 'text-green-700 bg-green-50',
+              },
+              {
+                label: 'Cancelled',
+                value: invoices.filter((inv) => inv.isCancelled).length,
+                color: 'text-red-700 bg-red-50',
+              },
             ].map(({ label, value, color }) => (
               <div key={label} className={`rounded-lg p-3 text-center ${color}`}>
                 <p className="text-lg font-bold">{value}</p>
@@ -84,45 +98,78 @@ const CustomerOrderHistory = ({ isOpen, onClose, customer }) => {
             ))}
           </div>
 
-          {orders.length === 0 ? (
-            <div className="text-center py-10 text-gray-400">No orders found for this customer</div>
+          {invoices.length === 0 ? (
+            <div className="text-center py-10 text-gray-400">
+              No invoices found for this customer
+            </div>
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-              {orders.map((o) => (
-                <div key={o._id} className="border border-gray-100 rounded-lg p-4 hover:bg-gray-50">
+              {invoices.map((inv) => (
+                <div
+                  key={inv._id}
+                  className={`border rounded-lg p-4 ${
+                    inv.isCancelled
+                      ? 'border-red-100 bg-red-50/30 opacity-70'
+                      : 'border-gray-100 hover:bg-gray-50'
+                  }`}
+                >
+                  {/* Header row */}
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <span className="font-mono font-semibold text-green-700 text-sm">{o.orderNumber}</span>
+                      <span className="font-mono font-semibold text-green-700 text-sm">
+                        {inv.invoiceNumber}
+                      </span>
                       <span className="text-gray-400 text-xs ml-2">
-                        {new Date(o.createdAt).toLocaleDateString('en-IN', {
+                        {new Date(inv.createdAt).toLocaleDateString('en-IN', {
                           day: '2-digit', month: 'short', year: 'numeric',
                         })}
                       </span>
                     </div>
-                    <div className="flex gap-1.5">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[o.orderStatus]}`}>
-                        {o.orderStatus}
+                    <div className="flex gap-1.5 flex-wrap justify-end">
+                      {/* Invoice status badge */}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          STATUS_BADGE[inv.status] || 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {inv.status}
                       </span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${PAY_BADGE[o.paymentStatus]}`}>
-                        {o.paymentStatus}
+                      {/* Payment mode badge */}
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-semibold uppercase ${
+                          PAY_BADGE[inv.paymentMode] || 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {inv.paymentMode}
                       </span>
                     </div>
                   </div>
 
-                  {/* Items */}
-                  <div className="space-y-1 mb-2">
-                    {o.items.map((item, i) => (
-                      <div key={i} className="flex justify-between text-xs text-gray-600">
-                        <span>{item.productName} × {item.quantity} {item.product?.unit || ''}</span>
-                        <span>₹{item.subtotal.toLocaleString('en-IN')}</span>
+                  {/* Line items */}
+                  <div className="space-y-0.5 mb-2">
+                    {inv.items.map((item, i) => (
+                      <div
+                        key={i}
+                        className="flex justify-between text-xs text-gray-600"
+                      >
+                        <span>
+                          {item.productName} × {item.quantity}
+                        </span>
+                        <span>₹{Number(item.total).toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
 
-                  {/* Total */}
-                  <div className="flex justify-between items-center border-t border-gray-100 pt-2">
-                    <span className="text-xs text-gray-500 capitalize">{o.paymentMethod?.replace('_', ' ')} · {o.orderType}</span>
-                    <span className="font-bold text-sm text-gray-800">₹{o.finalAmount.toLocaleString('en-IN')}</span>
+                  {/* GST + Grand Total footer */}
+                  <div className="border-t border-gray-100 pt-2 mt-1 grid grid-cols-2 gap-x-2 text-xs text-gray-500">
+                    <span>CGST: ₹{Number(inv.cgstTotal).toFixed(2)}</span>
+                    <span className="text-right">
+                      SGST: ₹{Number(inv.sgstTotal).toFixed(2)}
+                    </span>
+                    <span className="col-span-2 flex justify-between mt-1 text-sm font-bold text-gray-800">
+                      <span>Grand Total</span>
+                      <span>₹{Number(inv.grandTotal).toLocaleString('en-IN')}</span>
+                    </span>
                   </div>
                 </div>
               ))}

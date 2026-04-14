@@ -7,12 +7,14 @@ const {
   getInvoiceById,
   cancelInvoice,
   getGSTReport,
+  getDashboardStats,
 } = require('../controllers/invoice.controller');
 
 const { protect, authorizeRoles } = require('../middleware/auth.middleware');
 const { createInvoiceValidation } = require('../validations/invoice.validation');
 
 // GST report must come before /:id to avoid route shadowing
+router.get('/dashboard-stats', protect, getDashboardStats);
 router.get('/gst-report', protect, authorizeRoles('admin'), getGSTReport);
 
 router.get('/',    protect, getAllInvoices);

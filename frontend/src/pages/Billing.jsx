@@ -226,6 +226,7 @@ const Billing = () => {
   const dispatch = useDispatch();
 
   // Customer details
+  const [customerId, setCustomerId]   = useState('');
   const [customerName, setCustomerName] = useState('');
   const [mobile, setMobile]             = useState('');
   const [openingBalance, setOpBal]      = useState('0');
@@ -238,12 +239,16 @@ const Billing = () => {
   const [products, setProducts] = useState([]);
   const [loadingProd, setLoadProd] = useState(false);
 
+  // Customers list
+  const [customers, setCustomers] = useState([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
+
   // UI state
   const [errors, setErrors]       = useState({});
   const [submitting, setSubmit]   = useState(false);
   const [printInvoice, setPrintInv] = useState(null); // set to invoice obj to open print view
 
-  // ── Fetch products ────────────────────────────────────────────────────────
+  // ── Fetch products and customers ────────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       setLoadProd(true);
@@ -254,6 +259,21 @@ const Billing = () => {
         toast.error('Failed to load products');
       } finally {
         setLoadProd(false);
+      }
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoadingCustomers(true);
+      try {
+        const res = await api.get('/customers', { params: { limit: 500 } });
+        setCustomers(res.data.data.customers || []);
+      } catch {
+        toast.error('Failed to load customers');
+      } finally {
+        setLoadingCustomers(false);
       }
     };
     load();
@@ -296,6 +316,7 @@ const Billing = () => {
       const payload = {
         customerName: customerName.trim(),
         mobile: mobile.trim(),
+        customerId: customerId || null,
         openingBalance: Number(openingBalance || 0),
         paymentMode,
         items: filledItems.map((item) => ({
@@ -321,12 +342,23 @@ const Billing = () => {
   };
 
   const resetForm = () => {
+    setCustomerId('');
     setCustomerName('');
     setMobile('');
     setOpBal('0');
     setPaymentMode('cash');
     setItems([emptyItem()]);
     setErrors({});
+  };
+
+  // Handle customer selection from dropdown
+  const handleCustomerSelect = (custId) => {
+    setCustomerId(custId);
+    const selected = customers.find((c) => c._id === custId);
+    if (selected) {
+      setCustomerName(selected.name);
+      setMobile(selected.phone);  // phone field from customer model
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -347,12 +379,27 @@ const Billing = () => {
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
               Customer Details
             </p>
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-3">
+              <select
+                value={customerId}
+                onChange={(e) => handleCustomerSelect(e.target.value)}
+                disabled={loadingCustomers}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">Select Existing Customer (or enter new)</option>
+                {customers.map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.name} — {c.mobile}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="sm:col-span-2">
                 <Input
                   label="Customer Name *"
                   value={customerName}
-                  onChange={(e) => { setCustomerName(e.target.value); setErrors((p) => ({...p, customerName: ''})); }}
+                  onChange={(e) => { setCustomerName(e.target.value); setCustomerId(''); setErrors((p) => ({...p, customerName: ''})); }}
                   placeholder="e.g. Suraj Shinde"
                   error={errors.customerName}
                 />
@@ -360,7 +407,7 @@ const Billing = () => {
               <Input
                 label="Mobile *"
                 value={mobile}
-                onChange={(e) => { setMobile(e.target.value); setErrors((p) => ({...p, mobile: ''})); }}
+                onChange={(e) => { setMobile(e.target.value); setCustomerId(''); setErrors((p) => ({...p, mobile: ''})); }}
                 placeholder="9119471967"
                 maxLength={10}
                 error={errors.mobile}

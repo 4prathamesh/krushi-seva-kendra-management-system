@@ -10,8 +10,8 @@ const getById = async (id) => {
   return res.data.data;
 };
 
-const getOrders = async (id) => {
-  const res = await api.get(`/customers/${id}/orders`);
+const getInvoices = async (id) => {
+  const res = await api.get(`/customers/${id}/invoices`);
   return res.data.data;
 };
 
@@ -30,5 +30,5 @@ const remove = async (id) => {
   return res.data;
 };
 
-const customerService = { getAll, getById, getOrders, create, update, delete: remove };
+const customerService = { getAll, getById, getInvoices, create, update, delete: remove };
 export default customerService;

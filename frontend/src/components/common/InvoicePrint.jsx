@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 // ─── Shop constants — update these to match your actual shop ─────────────────
 const SHOP = {

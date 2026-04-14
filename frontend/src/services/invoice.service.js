@@ -25,5 +25,10 @@ const getGSTReport = async (params = {}) => {
   return res.data.data;
 };
 
-const invoiceService = { getAll, getById, create, cancel, getGSTReport };
+const getDashboardStats = async () => {
+  const res = await api.get('/invoices/dashboard-stats');
+  return res.data.data;
+};
+
+const invoiceService = { getAll, getById, create, cancel, getGSTReport, getDashboardStats };
 export default invoiceService;

@@ -44,6 +44,12 @@ const invoiceSchema = new mongoose.Schema(
       default: 'cash',
     },
 
+    status: {
+      type: String,
+      enum: ['paid', 'draft', 'cancelled'],
+      default: 'paid',
+    },
+
     // For balance tracking shown on bill footer
     openingBalance: { type: Number, default: 0 }, // "Op Bal" on the sample bill
     drInvoice:      { type: Number, default: 0 },  // invoice debit amount
@@ -62,5 +68,7 @@ const invoiceSchema = new mongoose.Schema(
 invoiceSchema.index({ invoiceNumber: 1 });
 invoiceSchema.index({ createdAt: -1 });
 invoiceSchema.index({ mobile: 1 });
+invoiceSchema.index({ status: 1 });
+invoiceSchema.index({ isCancelled: 1 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

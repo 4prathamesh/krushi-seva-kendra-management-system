@@ -1,114 +1,76 @@
-const Customer = require('../models/customer.model');
-const Order = require('../models/order.model');
+/**
+ * Customer Controller — thin layer.
+ * All business logic lives in src/services/customer.service.js
+ */
+
+const customerService = require('../services/customer.service');
 const { sendSuccess, sendError } = require('../utils/responseHandler');
 
-// @desc    Get all customers
-// @route   GET /api/customers
-// @access  Protected
 const getAllCustomers = async (req, res, next) => {
   try {
-    const { search, village, page = 1, limit = 10 } = req.query;
-
-    const filter = { isActive: true };
-    if (village) filter.village = { $regex: village, $options: 'i' };
-    if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    const skip = (page - 1) * limit;
-    const [customers, total] = await Promise.all([
-      Customer.find(filter).sort({ name: 1 }).skip(skip).limit(Number(limit)),
-      Customer.countDocuments(filter),
-    ]);
-
-    return sendSuccess(res, 200, 'Customers fetched', {
-      customers,
-      pagination: { total, page: Number(page), limit: Number(limit), pages: Math.ceil(total / limit) },
-    });
-  } catch (error) {
-    next(error);
+    const result = await customerService.getAllCustomers(req.query);
+    return sendSuccess(res, 200, 'Customers fetched', result);
+  } catch (err) {
+    if (err.status) return sendError(res, err.status, err.message);
+    next(err);
   }
 };
 
-// @desc    Get single customer
-// @route   GET /api/customers/:id
-// @access  Protected
 const getCustomerById = async (req, res, next) => {
   try {
-    const customer = await Customer.findById(req.params.id);
-    if (!customer) return sendError(res, 404, 'Customer not found');
+    const customer = await customerService.getCustomerById(req.params.id);
     return sendSuccess(res, 200, 'Customer fetched', { customer });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    if (err.status) return sendError(res, err.status, err.message);
+    next(err);
   }
 };
 
-// @desc    Get customer order history
-// @route   GET /api/customers/:id/orders
-// @access  Protected
-const getCustomerOrders = async (req, res, next) => {
+// Returns invoice history for a customer (replaces old "getCustomerOrders")
+const getCustomerInvoices = async (req, res, next) => {
   try {
-    const orders = await Order.find({ customer: req.params.id })
-      .populate('items.product', 'name unit')
-      .sort({ createdAt: -1 });
-    return sendSuccess(res, 200, 'Customer orders fetched', { orders });
-  } catch (error) {
-    next(error);
+    const invoices = await customerService.getCustomerInvoices(req.params.id);
+    return sendSuccess(res, 200, 'Customer invoices fetched', { invoices });
+  } catch (err) {
+    if (err.status) return sendError(res, err.status, err.message);
+    next(err);
   }
 };
 
-// @desc    Create customer
-// @route   POST /api/customers
-// @access  Protected
 const createCustomer = async (req, res, next) => {
   try {
-    const customer = await Customer.create(req.body);
+    const customer = await customerService.createCustomer(req.body);
     return sendSuccess(res, 201, 'Customer created', { customer });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    if (err.status) return sendError(res, err.status, err.message);
+    next(err);
   }
 };
 
-// @desc    Update customer
-// @route   PUT /api/customers/:id
-// @access  Protected
 const updateCustomer = async (req, res, next) => {
   try {
-    const customer = await Customer.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!customer) return sendError(res, 404, 'Customer not found');
+    const customer = await customerService.updateCustomer(req.params.id, req.body);
     return sendSuccess(res, 200, 'Customer updated', { customer });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    if (err.status) return sendError(res, err.status, err.message);
+    next(err);
   }
 };
 
-// @desc    Soft delete customer
-// @route   DELETE /api/customers/:id
-// @access  Admin
 const deleteCustomer = async (req, res, next) => {
   try {
-    const customer = await Customer.findByIdAndUpdate(
-      req.params.id,
-      { isActive: false },
-      { new: true }
-    );
-    if (!customer) return sendError(res, 404, 'Customer not found');
+    await customerService.deleteCustomer(req.params.id);
     return sendSuccess(res, 200, 'Customer deleted');
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    if (err.status) return sendError(res, err.status, err.message);
+    next(err);
   }
 };
 
 module.exports = {
   getAllCustomers,
   getCustomerById,
-  getCustomerOrders,
+  getCustomerInvoices,
   createCustomer,
   updateCustomer,
   deleteCustomer,

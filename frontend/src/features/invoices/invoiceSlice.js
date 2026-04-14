@@ -26,11 +26,26 @@ export const cancelInvoice = createAsyncThunk('invoices/cancel', async ({ id, re
   }
 });
 
+// Dashboard stats now come from Invoice (replaces old order-based stats)
+export const fetchDashboardStats = createAsyncThunk(
+  'invoices/dashboardStats',
+  async (_, thunkAPI) => {
+    try {
+      return await invoiceService.getDashboardStats();
+    } catch (err) {
+      return thunkAPI.rejectWithValue(
+        err.response?.data?.message || 'Failed to fetch dashboard stats'
+      );
+    }
+  }
+);
+
 const invoiceSlice = createSlice({
   name: 'invoices',
   initialState: {
     items: [],
     pagination: {},
+    dashboard:  null,
     loading: false,
     error: null,
   },
@@ -54,6 +69,10 @@ const invoiceSlice = createSlice({
       })
       .addCase(cancelInvoice.fulfilled, (state, action) => {
         state.items = state.items.filter(inv => inv._id !== action.payload);
+      })
+      // fetchDashboardStats
+      .addCase(fetchDashboardStats.fulfilled, (state, action) => {
+        state.dashboard = action.payload;
       });
   },
 });
