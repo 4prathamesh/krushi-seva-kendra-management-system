@@ -225,98 +225,69 @@ const ItemRow = ({ item, index, products, onChange, onRemove, errors = {} }) => 
 const Billing = () => {
   const dispatch = useDispatch();
 
-  // Customer details
-  const [customerId, setCustomerId]   = useState('');
   const [customerName, setCustomerName] = useState('');
   const [mobile, setMobile]             = useState('');
   const [openingBalance, setOpBal]      = useState('0');
   const [paymentMode, setPaymentMode]   = useState('cash');
+  const [items, setItems]               = useState([emptyItem()]);
+  const [products, setProducts]         = useState([]);
+  const [loadingProd, setLoadProd]      = useState(false);
+  const [errors, setErrors]             = useState({});
+  const [submitting, setSubmitting]     = useState(false);
+  const [printInvoice, setPrintInv]     = useState(null);
 
-  // Items
-  const [items, setItems] = useState([emptyItem()]);
-
-  // Products list (fetched once)
-  const [products, setProducts] = useState([]);
-  const [loadingProd, setLoadProd] = useState(false);
-
-  // Customers list
-  const [customers, setCustomers] = useState([]);
-  const [loadingCustomers, setLoadingCustomers] = useState(false);
-
-  // UI state
-  const [errors, setErrors]       = useState({});
-  const [submitting, setSubmit]   = useState(false);
-  const [printInvoice, setPrintInv] = useState(null); // set to invoice obj to open print view
-
-  // ── Fetch products and customers ────────────────────────────────────────────────────────
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       setLoadProd(true);
       try {
         const res = await api.get('/products', { params: { limit: 500 } });
-        setProducts(res.data.data.products.filter((p) => p.isActive));
+        if (!cancelled) setProducts(res.data.data.products.filter((p) => p.isActive));
       } catch {
-        toast.error('Failed to load products');
+        if (!cancelled) toast.error('Failed to load products');
       } finally {
-        setLoadProd(false);
+        if (!cancelled) setLoadProd(false);
       }
     };
     load();
+    return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoadingCustomers(true);
-      try {
-        const res = await api.get('/customers', { params: { limit: 500 } });
-        setCustomers(res.data.data.customers || []);
-      } catch {
-        toast.error('Failed to load customers');
-      } finally {
-        setLoadingCustomers(false);
-      }
-    };
-    load();
-  }, []);
-
-  // ── Item handlers ─────────────────────────────────────────────────────────
   const handleItemChange = useCallback((index, updated) => {
     setItems((prev) => prev.map((item, i) => (i === index ? updated : item)));
-    // Clear item-level errors
     setErrors((prev) => {
       if (!prev.itemErrs) return prev;
       const errs = [...prev.itemErrs];
-      errs[index] = {};
+      if (errs[index]) errs[index] = {};
       return { ...prev, itemErrs: errs };
     });
   }, []);
 
-  const addItem = () => setItems((prev) => [...prev, emptyItem()]);
+  const addItem    = () => setItems((prev) => [...prev, emptyItem()]);
+  const removeItem = (i) => setItems((prev) => prev.filter((_, idx) => idx !== i));
 
-  const removeItem = (index) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // ── Computed totals (live) ────────────────────────────────────────────────
-  const subTotal  = round2(items.reduce((s, i) => s + (i.lineSubtotal || 0), 0));
-  const cgstTotal = round2(items.reduce((s, i) => s + (i.cgst || 0), 0));
-  const sgstTotal = round2(items.reduce((s, i) => s + (i.sgst || 0), 0));
-  const totalGST  = round2(cgstTotal + sgstTotal);
+  const subTotal   = round2(items.reduce((s, i) => s + (i.lineSubtotal || 0), 0));
+  const cgstTotal  = round2(items.reduce((s, i) => s + (i.cgst || 0), 0));
+  const sgstTotal  = round2(items.reduce((s, i) => s + (i.sgst || 0), 0));
+  const totalGST   = round2(cgstTotal + sgstTotal);
   const grandTotal = round2(subTotal + totalGST);
 
-  // ── Submit ────────────────────────────────────────────────────────────────
+  const resetForm = () => {
+    setCustomerName(''); setMobile(''); setOpBal('0');
+    setPaymentMode('cash'); setItems([emptyItem()]); setErrors({});
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const filledItems = items.filter((i) => i.productId); // ignore blank rows
-    const errs = validate({ customerName, mobile }, filledItems, products);
+    const filledItems = items.filter((i) => i.productId);
+    const errs = validate(customerName, mobile, filledItems, products);
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
-    setSubmit(true);
+    setSubmitting(true);
     try {
-      const payload = {
+      const result = await dispatch(createInvoice({
         customerName: customerName.trim(),
         mobile: mobile.trim(),
-        customerId: customerId || null,
         openingBalance: Number(openingBalance || 0),
         paymentMode,
         items: filledItems.map((item) => ({
@@ -324,205 +295,130 @@ const Billing = () => {
           quantity:  Number(item.quantity),
           price:     Number(item.price),
           gstRate:   Number(item.gstRate),
-          hsn:       item.hsn,
-          batch:     item.batch,
-          expiry:    item.expiry,
+          hsn: item.hsn, batch: item.batch, expiry: item.expiry,
         })),
-      };
+      })).unwrap();
 
-      const result = await dispatch(createInvoice(payload)).unwrap();
       toast.success(`Invoice ${result.invoice.invoiceNumber} created!`);
-      setPrintInv(result.invoice); // open print view immediately
+      setPrintInv(result.invoice);
       resetForm();
+      // Refresh product stock counts after billing
+      api.get('/products', { params: { limit: 500 } })
+        .then((res) => setProducts(res.data.data.products.filter((p) => p.isActive)))
+        .catch(() => {});
     } catch (err) {
-      toast.error(typeof err === 'string' ? err : 'Failed to create invoice');
+      toast.error(typeof err === 'string' ? err : (err?.message || 'Failed to create invoice'));
     } finally {
-      setSubmit(false);
+      setSubmitting(false);
     }
   };
 
-  const resetForm = () => {
-    setCustomerId('');
-    setCustomerName('');
-    setMobile('');
-    setOpBal('0');
-    setPaymentMode('cash');
-    setItems([emptyItem()]);
-    setErrors({});
-  };
+  const thCls = 'text-left px-2 py-2 text-gray-600 uppercase text-[10px] font-semibold whitespace-nowrap';
 
-  // Handle customer selection from dropdown
-  const handleCustomerSelect = (custId) => {
-    setCustomerId(custId);
-    const selected = customers.find((c) => c._id === custId);
-    if (selected) {
-      setCustomerName(selected.name);
-      setMobile(selected.phone);  // phone field from customer model
-    }
-  };
-
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       <div className="space-y-5">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-800">🧾 New Invoice</h2>
-          <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+          <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full font-medium">
             B2C · CGST + SGST
           </span>
         </div>
 
         <form onSubmit={handleSubmit} noValidate>
 
-          {/* ── Customer Details ── */}
+          {/* Customer Details */}
           <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
               Customer Details
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 mb-3">
-              <select
-                value={customerId}
-                onChange={(e) => handleCustomerSelect(e.target.value)}
-                disabled={loadingCustomers}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="">Select Existing Customer (or enter new)</option>
-                {customers.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name} — {c.mobile}
-                  </option>
-                ))}
-              </select>
-            </div>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="sm:col-span-2">
-                <Input
-                  label="Customer Name *"
-                  value={customerName}
-                  onChange={(e) => { setCustomerName(e.target.value); setCustomerId(''); setErrors((p) => ({...p, customerName: ''})); }}
-                  placeholder="e.g. Suraj Shinde"
-                  error={errors.customerName}
-                />
+                <Input label="Customer Name *" value={customerName}
+                  onChange={(e) => { setCustomerName(e.target.value); setErrors((p) => ({...p, customerName: ''})); }}
+                  placeholder="e.g. Suraj Shinde" error={errors.customerName} />
               </div>
-              <Input
-                label="Mobile *"
-                value={mobile}
-                onChange={(e) => { setMobile(e.target.value); setCustomerId(''); setErrors((p) => ({...p, mobile: ''})); }}
-                placeholder="9119471967"
-                maxLength={10}
-                error={errors.mobile}
-              />
-              <Input
-                label="Opening Balance (₹)"
-                type="number"
-                min="0"
-                value={openingBalance}
-                onChange={(e) => setOpBal(e.target.value)}
-                placeholder="0"
-              />
+              <Input label="Mobile *" value={mobile}
+                onChange={(e) => { setMobile(e.target.value); setErrors((p) => ({...p, mobile: ''})); }}
+                placeholder="9876543210" maxLength={10} error={errors.mobile} />
+              <Input label="Opening Balance (₹)" type="number" min="0"
+                value={openingBalance} onChange={(e) => setOpBal(e.target.value)} placeholder="0" />
             </div>
             <div className="mt-3">
-              <label className="text-sm font-medium text-gray-700 block mb-1">Payment Mode</label>
-              <div className="flex gap-3">
+              <label className="text-sm font-medium text-gray-700 block mb-1.5">Payment Mode</label>
+              <div className="flex gap-5">
                 {['cash', 'upi', 'card'].map((mode) => (
-                  <label key={mode} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="paymentMode"
-                      value={mode}
-                      checked={paymentMode === mode}
-                      onChange={() => setPaymentMode(mode)}
-                      className="accent-green-600"
-                    />
-                    <span className="text-sm capitalize font-medium">{mode.toUpperCase()}</span>
+                  <label key={mode} className="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="radio" name="paymentMode" value={mode}
+                      checked={paymentMode === mode} onChange={() => setPaymentMode(mode)}
+                      className="accent-green-600 w-4 h-4" />
+                    <span className="text-sm font-medium capitalize">{mode.toUpperCase()}</span>
                   </label>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* ── Items Table ── */}
+          {/* Items Table */}
           <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
-              Items
-            </p>
-            {errors.items && <p className="text-red-500 text-xs mb-2">{errors.items}</p>}
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Items</p>
+            {errors.items && <p className="text-red-500 text-xs mb-2">⚠ {errors.items}</p>}
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[900px]">
-                <thead>
-                  <tr className="bg-gray-50 text-gray-600 text-xs uppercase">
-                    <th className="text-left px-2 py-2">Product</th>
-                    <th className="text-left px-1 py-2 w-16">HSN</th>
-                    <th className="text-left px-1 py-2 w-20">Batch</th>
-                    <th className="text-left px-1 py-2 w-20">Expiry</th>
-                    <th className="text-right px-1 py-2 w-16">Qty</th>
-                    <th className="text-right px-1 py-2 w-20">Rate (₹)</th>
-                    <th className="text-center px-1 py-2 w-16">GST%</th>
-                    <th className="text-right px-1 py-2 w-16">CGST</th>
-                    <th className="text-right px-1 py-2 w-16">SGST</th>
-                    <th className="text-right px-1 py-2 w-20">Total</th>
+            <div className="overflow-x-auto -mx-2">
+              <table className="w-full text-sm min-w-[860px] px-2">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className={thCls}>Product</th>
+                    <th className={thCls}>HSN</th>
+                    <th className={thCls}>Batch</th>
+                    <th className={thCls}>Expiry</th>
+                    <th className={thCls + ' text-right'}>Qty</th>
+                    <th className={thCls + ' text-right'}>Rate (₹)</th>
+                    <th className={thCls + ' text-center'}>GST%</th>
+                    <th className={thCls + ' text-right'}>CGST</th>
+                    <th className={thCls + ' text-right'}>SGST</th>
+                    <th className={thCls + ' text-right'}>Total</th>
                     <th className="w-8" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {loadingProd ? (
-                    <tr>
-                      <td colSpan={11} className="text-center py-6 text-gray-400">
-                        Loading products...
-                      </td>
-                    </tr>
+                    <tr><td colSpan={11} className="text-center py-6 text-gray-400 text-sm">Loading products...</td></tr>
                   ) : (
                     items.map((item, idx) => (
-                      <ItemRow
-                        key={idx}
-                        item={item}
-                        index={idx}
-                        products={products}
-                        onChange={handleItemChange}
-                        onRemove={removeItem}
-                        errors={errors.itemErrs?.[idx] || {}}
-                      />
+                      <ItemRow key={idx} item={item} index={idx} products={products}
+                        onChange={handleItemChange} onRemove={removeItem}
+                        errors={errors.itemErrs?.[idx] || {}} />
                     ))
                   )}
                 </tbody>
               </table>
             </div>
 
-            <button
-              type="button"
-              onClick={addItem}
-              className="mt-3 text-sm text-green-600 hover:text-green-800 font-medium"
-            >
+            <button type="button" onClick={addItem}
+              className="mt-3 text-sm text-green-600 hover:text-green-800 font-medium flex items-center gap-1">
               + Add Item
             </button>
           </div>
 
-          {/* ── GST Summary & Submit ── */}
+          {/* Totals + Actions */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-            {/* GST Breakdown */}
+            {/* GST Summary */}
             <div className="bg-white rounded-xl shadow-sm p-5">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">
                 GST Summary
               </p>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal (taxable)</span>
-                  <span>₹{subTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>CGST</span>
-                  <span>₹{cgstTotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-gray-600">
-                  <span>SGST</span>
-                  <span>₹{sgstTotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-gray-500 text-xs">
-                  <span>Total GST</span>
-                  <span>₹{totalGST.toFixed(2)}</span>
-                </div>
+                {[
+                  ['Subtotal (taxable)', `₹${subTotal.toLocaleString('en-IN', {minimumFractionDigits:2})}`],
+                  ['CGST', `₹${cgstTotal.toFixed(2)}`],
+                  ['SGST', `₹${sgstTotal.toFixed(2)}`],
+                  ['Total GST', `₹${totalGST.toFixed(2)}`],
+                ].map(([label, value]) => (
+                  <div key={label} className="flex justify-between text-gray-600">
+                    <span>{label}</span><span>{value}</span>
+                  </div>
+                ))}
                 <div className="flex justify-between font-bold text-base text-green-700 border-t pt-2 mt-1">
                   <span>Grand Total</span>
                   <span>₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
@@ -532,19 +428,15 @@ const Billing = () => {
 
             {/* Actions */}
             <div className="bg-white rounded-xl shadow-sm p-5 flex flex-col justify-between">
-              <div className="text-xs text-gray-400 space-y-1">
-                <p>• Invoice number is auto-generated (INV-YYYY-NNNN)</p>
-                <p>• Stock is deducted immediately on save</p>
-                <p>• CGST and SGST are split 50/50 (same-state B2C)</p>
-              </div>
+              <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
+                <li>Invoice number is auto-generated (INV-YYYY-NNNN)</li>
+                <li>Stock is deducted immediately on save</li>
+                <li>CGST and SGST split 50/50 (B2C same-state)</li>
+                <li>Print preview opens automatically after save</li>
+              </ul>
               <div className="flex gap-3 mt-4">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={resetForm}
-                  disabled={submitting}
-                  className="flex-1"
-                >
+                <Button type="button" variant="secondary" onClick={resetForm}
+                  disabled={submitting} className="flex-1">
                   Clear
                 </Button>
                 <Button type="submit" loading={submitting} className="flex-1">
@@ -556,12 +448,8 @@ const Billing = () => {
         </form>
       </div>
 
-      {/* ── Print View overlay ── */}
       {printInvoice && (
-        <InvoicePrint
-          invoice={printInvoice}
-          onClose={() => setPrintInv(null)}
-        />
+        <InvoicePrint invoice={printInvoice} onClose={() => setPrintInv(null)} />
       )}
     </>
   );

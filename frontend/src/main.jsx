@@ -1,4 +1,3 @@
-import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
@@ -7,10 +6,15 @@ import { store } from './store/store';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
     <Provider store={store}>
       <App />
-      <Toaster position="top-right" />
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3500,
+          style: { fontSize: '14px', borderRadius: '10px' },
+          success: { iconTheme: { primary: '#16a34a', secondary: '#fff' } },
+        }}
+      />
     </Provider>
-  </React.StrictMode>
 );

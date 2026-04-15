@@ -164,7 +164,23 @@ const UserManagement = () => {
     }
   };
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get('/auth/users');
+        if (!cancelled) setUsers(res.data.data.users);
+      } catch {
+        if (!cancelled) toast.error('Failed to load users');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAdded = (newUser) => {
     setUsers((prev) => [newUser, ...prev]);

@@ -5,23 +5,29 @@ const { sendError } = require('../utils/responseHandler');
 const protect = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return sendError(res, 401, 'Not authorized, no token');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return sendError(res, 401, 'Not authorised — no token provided');
     }
 
-    const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const user = await User.findById(decoded.id).select('-password');
-    
-    if (!user || !user.isActive) {
-      return sendError(res, 401, 'User not found or deactivated');
+    const token   = authHeader.split(' ')[1];
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (jwtErr) {
+      const msg = jwtErr.name === 'TokenExpiredError'
+        ? 'Session expired — please log in again'
+        : 'Invalid token';
+      return sendError(res, 401, msg);
     }
+
+    const user = await User.findById(decoded.id).select('-password').lean();
+    if (!user)          return sendError(res, 401, 'User no longer exists');
+    if (!user.isActive) return sendError(res, 403, 'Account deactivated — contact admin');
 
     req.user = user;
     next();
-  } catch (error) {
-    return sendError(res, 401, 'Token invalid or expired');
+  } catch (err) {
+    next(err);
   }
 };
 
