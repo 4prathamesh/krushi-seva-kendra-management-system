@@ -72,11 +72,17 @@ const createProduct = async (data) => {
 // updateProduct
 // ─────────────────────────────────────────────────────────────────────────────
 const updateProduct = async (id, data) => {
-  const product = await Product.findByIdAndUpdate(id, data, {
-    new: true,
-    runValidators: true,
-  });
+  const product = await Product.findById(id);
   if (!product) throw { status: 404, message: 'Product not found' };
+
+  if (data.stock !== undefined) {
+    data.stock = Number(data.stock);
+  }
+
+  Object.assign(product, data); // update fields
+
+  await product.save(); // triggers pre-save hook to recalculate stockStatus if stock changed
+  
   return product;
 };
 

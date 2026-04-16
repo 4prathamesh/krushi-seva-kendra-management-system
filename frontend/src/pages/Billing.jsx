@@ -23,12 +23,13 @@ const calcLine = (price, qty, gstRate) => {
 };
 
 // ─── Validation ───────────────────────────────────────────────────────────────
-const validate = (form, items, products) => {
+const validate = (customerName, mobile, items, products) => {
+  console.log('Validating form', customerName, mobile);
   const errs = {};
-  if (!form.customerName.trim()) errs.customerName = 'Customer name is required';
-  if (!form.mobile.trim()) {
+  if (!customerName.trim()) errs.customerName = 'Customer name is required';
+  if (!mobile.trim()) {
     errs.mobile = 'Mobile number is required';
-  } else if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) {
+  } else if (!/^[6-9]\d{9}$/.test(mobile.trim())) {
     errs.mobile = 'Enter a valid 10-digit mobile number';
   }
   if (items.length === 0) errs.items = 'Add at least one item';
