@@ -42,7 +42,7 @@ const Dashboard = () => {
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <Card
           icon="🧾"
           title="Total Invoices"
@@ -78,6 +78,7 @@ const Dashboard = () => {
           color="red"
           subtitle="products need restock"
         />
+        <Card icon="📒" title="Total Udhar"     value={dashboard ? `₹${Number(dashboard.totalOutstanding).toLocaleString('en-IN')}` : '—'} color="red" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -22,7 +22,9 @@ const Customers = () => {
   const [historyCustomer, setHistoryCust] = useState(null);
 
   useEffect(() => {
+    const controller = new AbortController();
     dispatch(fetchCustomers({ search, page, limit: 10 }));
+    return () => controller.abort();
   }, [dispatch, search, page]);
 
   const openAdd       = () => { setEditing(null); setFormOpen(true); };
@@ -65,7 +67,7 @@ const Customers = () => {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
             <tr>
-              {['Name', 'Phone', 'Village', 'District', 'Crops', 'Purchases', 'Balance', 'Actions'].map((h) => (
+              {['Name', 'Phone', 'Village', 'District', 'Crops', 'Purchases', 'Udhar / Credit', 'Actions'].map((h) => (
                 <th key={h} className="text-left px-4 py-3">{h}</th>
               ))}
             </tr>
@@ -98,9 +100,13 @@ const Customers = () => {
                     ₹{(c.totalPurchases ?? 0).toLocaleString('en-IN')}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={c.outstandingBalance > 0 ? 'text-red-600 font-semibold' : 'text-gray-400'}>
-                      ₹{(c.outstandingBalance ?? 0).toLocaleString('en-IN')}
-                    </span>
+                    {(c.creditBalance || 0) > 0 ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
+                        📒 ₹{Number(c.creditBalance).toFixed(2)}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">Clear</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1.5">

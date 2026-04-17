@@ -2,7 +2,10 @@ const express = require('express');
 const router  = express.Router();
 
 const {
-  createInvoice,
+  createInvoice, 
+  lookupCustomer, 
+  recordCreditPayment, 
+  getCreditLedger,
   getAllInvoices,
   getInvoiceById,
   cancelInvoice,
@@ -16,6 +19,9 @@ const { createInvoiceValidation } = require('../validations/invoice.validation')
 // GST report must come before /:id to avoid route shadowing
 router.get('/dashboard-stats', protect, getDashboardStats);
 router.get('/gst-report', protect, authorizeRoles('admin'), getGSTReport);
+router.get('/lookup',                      protect, lookupCustomer);               // ?mobile=
+router.get('/credit-ledger/:customerId',   protect, getCreditLedger);
+router.post('/credit-payment',             protect, recordCreditPayment);
 
 router.get('/',    protect, getAllInvoices);
 router.get('/:id', protect, getInvoiceById);

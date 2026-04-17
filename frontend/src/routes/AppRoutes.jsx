@@ -9,6 +9,7 @@ import Customers from '../pages/Customers';
 import Profile        from '../pages/Profile';
 import UserManagement from '../pages/UserManagement';
 import Billing         from '../pages/Billing';
+import Purchases      from '../pages/Purchases';
 import Invoices        from '../pages/Invoices';
 
 const PrivateRoute = ({ children }) => {
@@ -39,6 +40,7 @@ const AppRoutes = () => {
         <Route path="products" element={<Products />} />
         <Route path="customers" element={<Customers />} />
         <Route path="billing"   element={<Billing />} /> 
+        <Route path="purchases" element={<Purchases />} />
         <Route path="invoices"  element={<Invoices />} /> 
         <Route path="profile"   element={<Profile />} />
         <Route

@@ -12,30 +12,49 @@ const { sendSuccess, sendError } = require('../utils/responseHandler');
 // ─────────────────────────────────────────────────────────────────────────────
 const createInvoice = async (req, res, next) => {
   try {
-    const {
-      customerName,
-      mobile,
-      customerId,
-      items,
-      paymentMode,
-      openingBalance,
-    } = req.body;
-
-    const invoice = await invoiceService.createInvoice({
-      customerName,
-      mobile,
-      customerId,
-      items,
-      paymentMode,
-      openingBalance,
-      userId: req.user._id,
-    });
+    const invoice = await invoiceService.createInvoice({ ...req.body, userId: req.user._id });
 
     return sendSuccess(res, 201, 'Invoice created', { invoice });
   } catch (err) {
     if (err.status) return sendError(res, err.status, err.message);
     // Unique-index race condition on invoiceNumber
     if (err.code === 11000) return sendError(res, 409, 'Invoice number conflict — please retry');
+    next(err);
+  }
+};
+
+// GET /api/invoices/lookup?mobile=9876543210
+const lookupCustomer = async (req, res, next) => {
+  try {
+    const { mobile } = req.query;
+    if (!mobile) return sendError(res, 400, 'Mobile number is required');
+    const customer = await invoiceService.lookupCustomerByMobile(mobile);
+    return sendSuccess(res, 200, customer ? 'Customer found' : 'Customer not found', { customer });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/invoices/credit-payment
+const recordCreditPayment = async (req, res, next) => {
+  try {
+    const { customerId, amount, note } = req.body;
+    if (!customerId || !amount) return sendError(res, 400, 'customerId and amount are required');
+    const result = await invoiceService.recordCreditPayment({ customerId, amount, note, userId: req.user._id });
+    return sendSuccess(res, 200, `Payment of ₹${result.applied} recorded. Remaining credit: ₹${result.remainingCredit}`, result);
+  } catch (err) {
+    if (err.status) return sendError(res, err.status, err.message);
+    next(err);
+  }
+};
+
+// GET /api/invoices/credit-ledger/:customerId
+const getCreditLedger = async (req, res, next) => {
+  try {
+    const data = await invoiceService.getCreditLedger(req.params.customerId);
+    return sendSuccess(res, 200, 'Credit ledger fetched', data);
+  } catch (err) {
+    if (err.status) return sendError(res, err.status, err.message);
     next(err);
   }
 };
@@ -110,7 +129,10 @@ const getDashboardStats = async (req, res, next) => {
 };
 
 module.exports = {
-  createInvoice,
+  createInvoice, 
+  lookupCustomer, 
+  recordCreditPayment, 
+  getCreditLedger,
   getAllInvoices,
   getInvoiceById,
   cancelInvoice,

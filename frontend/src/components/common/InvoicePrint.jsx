@@ -268,7 +268,7 @@ const buildInvoiceHTML = (invoice) => {
         <div><span class="lbl">Mob : </span>${invoice.mobile}</div>
         <div class="inv-bill-meta">
           <div><span class="lbl">Bill No : </span>${invoice.invoiceNumber?.split('-').pop()}</div>
-          <div class="right">[${(invoice.paymentMode ?? '').toUpperCase()}] Cash Bill</div>
+          <div class="right">${invoice.paymentMode === 'none' ? 'Udhar' : (invoice.paymentMode ?? '').toUpperCase()} Bill</div>
         </div>
         <div><span class="lbl">Address : </span></div>
         <div><span class="lbl">GSTN : </span></div>
@@ -320,8 +320,8 @@ const buildInvoiceHTML = (invoice) => {
           </div>
           <div class="inv-balance">
             <span>Op Bal: ${fmt(invoice.openingBalance)}</span>
-            <span>Dr-Inv: ${fmt(invoice.drInvoice)}</span>
-            <span>ClBalance. : <strong>${fmt(invoice.closingBalance)}</strong></span>
+            <span>Paid: ${fmt(invoice.paidAmount ?? invoice.grandTotal)}</span>
+            <span>Due (Udhar): <strong>${fmt(invoice.dueAmount ?? 0)}</strong></span>
           </div>
         </div>
 

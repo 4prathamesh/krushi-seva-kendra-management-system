@@ -20,11 +20,26 @@ const customerSchema = new mongoose.Schema(
     landAcres: { type: Number, min: 0 },
     cropTypes: [{ type: String }],   // e.g. ['wheat', 'cotton', 'sugarcane']
     totalPurchases: { type: Number, default: 0 },
+    creditBalance: { type: Number, default: 0, min: 0 },
+    paymentStatus: {
+      type: String,
+      enum: ['clear', 'due'],
+      default: 'clear',
+    },
     outstandingBalance: { type: Number, default: 0 },
     notes: { type: String },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );
+
+// Keep outstandingBalance in sync with creditBalance via pre-save
+customerSchema.pre('save', function (next) {
+  this.outstandingBalance = this.creditBalance;
+  this.paymentStatus = this.creditBalance > 0 ? 'due' : 'clear';
+  next();
+});
+
+customerSchema.index({ name: 'text' });
 
 module.exports = mongoose.model('Customer', customerSchema);

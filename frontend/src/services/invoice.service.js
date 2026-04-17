@@ -30,5 +30,20 @@ const getDashboardStats = async () => {
   return res.data.data;
 };
 
-const invoiceService = { getAll, getById, create, cancel, getGSTReport, getDashboardStats };
+const lookupByMobile = async (mobile) => {
+  const res = await api.get('/invoices/lookup', { params: { mobile } });
+  return res.data.data;
+};
+
+const recordCreditPayment = async (data) => {
+  const res = await api.post('/invoices/credit-payment', data);
+  return res.data.data;
+};
+
+const getCreditLedger = async (customerId) => {
+  const res = await api.get(`/invoices/credit-ledger/${customerId}`);
+  return res.data.data;
+};
+
+const invoiceService = { getAll, getById, create, cancel, getGSTReport, getDashboardStats, lookupByMobile, recordCreditPayment, getCreditLedger };
 export default invoiceService;

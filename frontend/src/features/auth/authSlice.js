@@ -8,7 +8,8 @@ export const login = createAsyncThunk('auth/login', async (credentials, thunkAPI
   try {
     return await authService.login(credentials);
   } catch (err) {
-    return thunkAPI.rejectWithValue(err.response?.data?.message || 'Login failed');
+    const message = err.response?.data?.message || err.message || 'Login failed';
+    return thunkAPI.rejectWithValue(message);
   }
 });
 
@@ -16,7 +17,8 @@ export const getMe = createAsyncThunk('auth/getMe', async (_, thunkAPI) => {
   try {
     return await authService.getMe();
   } catch (err) {
-    return thunkAPI.rejectWithValue(err.response?.data?.message || 'Failed to fetch profile');
+    const message = err.response?.data?.message || err.message || 'Failed to fetch profile';
+    return thunkAPI.rejectWithValue(message);
   }
 });
 
@@ -51,7 +53,7 @@ const authSlice = createSlice({
       })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload;
+        state.error = action.payload || action.error?.message || 'Login failed';
       })
       .addCase(getMe.fulfilled, (state, action) => {
         state.user = action.payload.user;

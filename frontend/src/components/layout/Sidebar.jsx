@@ -10,6 +10,7 @@ const Sidebar = () => {
     { to: '/invoices',  label: '📋 Invoices' },
     { to: '/products',  label: '🌱 Products' },
     { to: '/customers', label: '👨‍🌾 Customers' },
+    { to: '/purchases',  label: '📥 Purchases' },
     ...(user?.role === 'admin' ? [{ to: '/users', label: '👥 Users' }] : []),
   ];
 

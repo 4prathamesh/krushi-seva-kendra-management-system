@@ -26,8 +26,8 @@ const createInvoiceValidation = [
     .withMessage('GST rate must be between 0 and 100'),
   body('paymentMode')
     .optional()
-    .isIn(['cash', 'upi', 'card'])
-    .withMessage('Payment mode must be cash, upi, or card'),
+    .isIn(['cash', 'upi', 'card', 'mixed', 'none'])
+    .withMessage('Payment mode must be cash, upi, card, mixed, or none'),
   body('openingBalance')
     .optional()
     .isFloat({ min: 0 })

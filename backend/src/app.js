@@ -20,6 +20,7 @@ const authRoutes     = require('./routes/auth.routes');
 const productRoutes  = require('./routes/product.routes');
 const customerRoutes = require('./routes/customer.routes');
 const invoiceRoutes  = require('./routes/invoice.routes');
+const purchaseRoutes = require('./routes/purchase.routes');
 
 const errorMiddleware  = require('./middleware/error.middleware');
 const loggerMiddleware = require('./middleware/logger.middleware');
@@ -83,6 +84,7 @@ app.use('/api/auth',      authLimiter, authRoutes);   // strict limit on auth
 app.use('/api/products',  apiLimiter,  productRoutes);
 app.use('/api/customers', apiLimiter,  customerRoutes);
 app.use('/api/invoices',  apiLimiter,  invoiceRoutes);
+app.use('/api/purchases', apiLimiter,  purchaseRoutes);
 
 // ─── Health Check (no auth, no rate limit — used by load balancers) ───────────
 app.get('/api/health', (_req, res) => {

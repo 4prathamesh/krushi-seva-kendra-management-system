@@ -17,11 +17,16 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url;
+
+    // Avoid redirecting on login failure so the UI can show the error message.
+    if (status === 401 && requestUrl !== '/auth/login') {
       localStorage.removeItem('ksk_token');
       localStorage.removeItem('ksk_user');
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );

@@ -15,7 +15,9 @@ const invoiceItemSchema = new mongoose.Schema({
   cgst:        { type: Number, required: true },    // gstAmount / 2
   sgst:        { type: Number, required: true },    // gstAmount / 2
   total:       { type: Number, required: true },    // (price × qty) + gstAmount
-});
+  },
+  { _id: false }
+);
 
 // ─── Invoice Schema ───────────────────────────────────────────────────────────
 const invoiceSchema = new mongoose.Schema(
@@ -30,7 +32,7 @@ const invoiceSchema = new mongoose.Schema(
     // Optional link to Customer document if customer is registered
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', default: null },
 
-    items: [invoiceItemSchema],
+    items: { type: [invoiceItemSchema], required: true },
 
     subTotal:   { type: Number, required: true }, // sum of (price × qty) across all items
     totalGST:   { type: Number, required: true }, // sum of all gstAmount
@@ -40,13 +42,21 @@ const invoiceSchema = new mongoose.Schema(
 
     paymentMode: {
       type: String,
-      enum: ['cash', 'upi', 'card'],
+      enum: ['cash', 'upi', 'card', 'mixed', 'none'],
       default: 'cash',
+    },
+
+    paidAmount: { type: Number, required: true, default: 0 },
+    dueAmount:  { type: Number, required: true, default: 0 },
+    paymentStatus: {
+      type: String,
+      enum: ['paid', 'partial', 'credit'],
+      default: 'paid',
     },
 
     status: {
       type: String,
-      enum: ['paid', 'draft', 'cancelled'],
+      enum: ['draft', 'paid', 'partial', 'credit', 'cancelled'],
       default: 'paid',
     },
 
@@ -65,10 +75,10 @@ const invoiceSchema = new mongoose.Schema(
 );
 
 // Index for fast year-based sequence lookups
-invoiceSchema.index({ invoiceNumber: 1 });
 invoiceSchema.index({ createdAt: -1 });
 invoiceSchema.index({ mobile: 1 });
-invoiceSchema.index({ status: 1 });
-invoiceSchema.index({ isCancelled: 1 });
+invoiceSchema.index({ customer: 1, createdAt: -1 });
+invoiceSchema.index({ customerName: 'text', invoiceNumber: 'text', mobile: 'text' });
+invoiceSchema.index({ status: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);

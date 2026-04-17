@@ -9,7 +9,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <Provider store={store}>
       <App />
       <Toaster 
-        position="top-right"
+        position="top-center"
         toastOptions={{
           duration: 3500,
           style: { fontSize: '14px', borderRadius: '10px' },
