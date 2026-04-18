@@ -29,6 +29,7 @@ const validate = (form, items, products) => {
   } else if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) {
     errs.mobile = 'Enter a valid 10-digit mobile number';
   }
+  if(!form.village.trim()) errs.village = 'Village is required';
   const paidAmt = Number(form.paidAmount);
   if (isNaN(paidAmt) || paidAmt < 0) errs.paidAmount = 'Must be ≥ 0';
 
@@ -229,10 +230,7 @@ const Billing = () => {
   const paidAmt    = round2(Math.min(Number(form.paidAmount) || 0, grandTotal));
   const dueAmt     = round2(grandTotal - paidAmt);
 
-  const paymentStatus =
-    paidAmt <= 0               ? 'credit'
-    : dueAmt <= 0              ? 'paid'
-    :                            'partial';
+  const paymentStatus = paidAmt <= 0 ? 'credit' : dueAmt <= 0 ? 'paid' : 'partial';
 
   const paymentStatusBadge = {
     paid:    { label: 'Fully Paid',    cls: 'bg-green-100 text-green-700' },
@@ -342,9 +340,9 @@ const Billing = () => {
               </div>
 
               {/* Village */}
-              <Input label="Village" value={form.village}
+              <Input label="Village *" value={form.village}
                 onChange={(e) => handleFormChange('village', e.target.value)}
-                placeholder="e.g. Jujarpur" />
+                placeholder="e.g. Jujarpur" error={errors.village} />
             </div>
 
             {/* Payment section */}

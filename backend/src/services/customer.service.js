@@ -4,9 +4,26 @@
 
 const Customer = require('../models/customer.model');
 
-const buildFilter = ({ search, village } = {}) => {
+const escapeRegex = (text) => {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+const buildFilter = ({ search, village, hasUdhar } = {}) => {
   const filter = { isActive: true };
-  if (village) filter.village = { $regex: village.trim(), $options: 'i' };
+
+  if (village) {
+    const safeVillage = escapeRegex(village.trim());
+
+    filter.village = {
+      $regex: safeVillage,
+      $options: 'i'
+    };
+  }
+
+  if (hasUdhar === 'true' || hasUdhar === true){
+    filter.creditBalance = { $gt: 0 };
+  }
+
   if (search) {
     const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     filter.$or = [
@@ -17,8 +34,10 @@ const buildFilter = ({ search, village } = {}) => {
   return filter;
 };
 
-const getAllCustomers = async ({ search, village, page = 1, limit = 10 } = {}) => {
-  const filter = buildFilter({ search, village });
+const getAllCustomers = async ({ search, village, hasUdhar, page = 1, limit = 10 } = {}) => {
+  console.log(village);
+  const filter = buildFilter({ search, village, hasUdhar });
+  console.log('customer filter:', filter);
   const skip   = (Number(page) - 1) * Number(limit);
 
   const [customers, total] = await Promise.all([
@@ -35,6 +54,15 @@ const getAllCustomers = async ({ search, village, page = 1, limit = 10 } = {}) =
       pages: Math.ceil(total / Number(limit)) || 1,
     },
   };
+};
+
+// Used to populate the village filter dropdown on the frontend
+const getDistinctVillages = async () => {
+  const villages = await Customer.distinct('village', {
+    isActive: true,
+    village: { $ne: '', $exists: true, $ne: null },
+  });
+  return villages.filter(Boolean).sort();
 };
 
 const getCustomerById = async (id) => {
@@ -76,6 +104,7 @@ const deleteCustomer = async (id) => {
 
 module.exports = {
   getAllCustomers,
+  getDistinctVillages,
   getCustomerById,
   getCustomerInvoices,
   createCustomer,

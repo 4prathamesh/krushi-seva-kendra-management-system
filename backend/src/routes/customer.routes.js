@@ -3,6 +3,7 @@ const router = express.Router();
 
 const {
   getAllCustomers,
+  getDistinctVillages,
   getCustomerById,
   getCustomerInvoices,
   createCustomer,
@@ -11,6 +12,7 @@ const {
 } = require('../controllers/customer.controller');
 const { protect, authorizeRoles } = require('../middleware/auth.middleware');
 
+router.get('/villages',        protect, getDistinctVillages);  // dropdown list
 router.get('/',                  protect, getAllCustomers);
 router.get('/:id',               protect, getCustomerById);
 router.get('/:id/invoices',      protect, getCustomerInvoices); 
