@@ -139,7 +139,7 @@ const Billing = () => {
 
   const [form, setForm] = useState({
     customerName: '', mobile: '', village: '', taluka: '', district: '',
-    paidAmount: '', openingBalance: '0', paymentMode: 'cash',
+    paidAmount: '', paymentMode: 'cash',
   });
   const [items, setItems]           = useState([emptyItem()]);
   const [products, setProducts]     = useState([]);
@@ -191,7 +191,6 @@ const Billing = () => {
               village:         customer.village || p.village,
               taluka:          customer.taluka  || p.taluka,
               district:        customer.district|| p.district,
-              openingBalance:  String(customer.creditBalance || 0),
             }));
             toast.success(`Customer found: ${customer.name}`);
           }
@@ -240,7 +239,7 @@ const Billing = () => {
 
   // ── Reset ──────────────────────────────────────────────────────────────────
   const resetForm = () => {
-    setForm({ customerName: '', mobile: '', village: '', taluka: '', district: '', paidAmount: '', openingBalance: '0', paymentMode: 'cash' });
+    setForm({ customerName: '', mobile: '', village: '', taluka: '', district: '', paidAmount: '', paymentMode: 'cash' });
     setItems([emptyItem()]);
     setErrors({});
     setFoundCustomer(null);
@@ -263,7 +262,6 @@ const Billing = () => {
         district:       form.district.trim(),
         paidAmount:     Number(form.paidAmount) || 0,
         paymentMode:    paymentStatus === 'credit' ? 'none' : form.paymentMode,
-        openingBalance: Number(form.openingBalance) || 0,
         items: filledItems.map((item) => ({
           productId: item.productId, quantity: Number(item.quantity),
           price: Number(item.price), gstRate: Number(item.gstRate),
@@ -375,12 +373,20 @@ const Billing = () => {
                     error={errors.paidAmount} />
                 </div>
 
-                {/* Opening balance (pre-filled from customer credit) */}
-                <div>
-                  <Input label="Opening Balance (₹)" type="number" min="0"
-                    value={form.openingBalance}
-                    onChange={(e) => handleFormChange('openingBalance', e.target.value)}
-                    placeholder="0" />
+                {/* Previous Udhar — read-only, auto-used server-side */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium text-gray-700">Previous Udhar</span>
+                  <div className={`text-sm font-semibold px-3 py-2 rounded-lg border ${
+                    foundCustomer?.creditBalance > 0
+                      ? 'bg-red-50 border-red-200 text-red-700'
+                      : 'bg-gray-50 border-gray-200 text-gray-400'
+                  }`}>
+                    {foundCustomer
+                      ? `₹${(foundCustomer.creditBalance || 0).toFixed(2)}`
+                      : '—'
+                    }
+                    <span className="text-xs font-normal ml-1 opacity-60">(auto-applied)</span>
+                  </div>
                 </div>
 
                 {/* Live payment status badge */}

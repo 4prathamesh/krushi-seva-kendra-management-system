@@ -35,9 +35,7 @@ const buildFilter = ({ search, village, hasUdhar } = {}) => {
 };
 
 const getAllCustomers = async ({ search, village, hasUdhar, page = 1, limit = 10 } = {}) => {
-  console.log(village);
   const filter = buildFilter({ search, village, hasUdhar });
-  console.log('customer filter:', filter);
   const skip   = (Number(page) - 1) * Number(limit);
 
   const [customers, total] = await Promise.all([

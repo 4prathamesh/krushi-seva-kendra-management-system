@@ -157,7 +157,6 @@ const createInvoice = async ({
   district = '',
   paidAmount = 0,
   paymentMode = 'cash',
-  openingBalance = 0,
   items,
   userId,
 }) => {
@@ -174,8 +173,8 @@ const createInvoice = async ({
   const { paid, due, paymentStatus } = resolvePaymentStatus(grandTotal, paidAmount);
 
   // Step 5: Balance footer for printed bill
-  const openingBal     = Number(openingBalance);
-  const drInvoice      = grandTotal;
+  const openingBal     = customer.creditBalance || 0;
+  const drInvoice      = due;
   const closingBalance = openingBal + due; // closing = opening credit + new due
 
   // Step 6: Payment mode — force 'none' when credit, keep provided mode otherwise

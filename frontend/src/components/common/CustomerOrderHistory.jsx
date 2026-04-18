@@ -87,7 +87,7 @@ const RecordPaymentPanel = ({ customer, onPaid }) => {
 };
 
 // ── Main Component ────────────────────────────────────────────────────────────
-const CustomerOrderHistory = ({ isOpen, onClose, customer: customerProp }) => {
+const CustomerOrderHistory = ({ isOpen, onClose, customer: customerProp, onPaymentRecorded }) => {
   const [invoices, setInvoices]     = useState([]);
   const [customer, setCustomer]     = useState(null);
   const [loading, setLoading]       = useState(false);
@@ -161,7 +161,7 @@ const CustomerOrderHistory = ({ isOpen, onClose, customer: customerProp }) => {
           {/* Credit payment panel — only when there's outstanding balance */}
           {(cust?.creditBalance || 0) > 0 && (
             <div className="mb-4">
-              <RecordPaymentPanel customer={cust} onPaid={load} />
+              <RecordPaymentPanel customer={cust} onPaid={() => { load(); if (onPaymentRecorded) onPaymentRecorded(); }} />
               <button
                 onClick={showLedger ? () => setShowLedger(false) : loadLedger}
                 className="mt-2 text-xs text-blue-500 hover:text-blue-700 font-medium"
