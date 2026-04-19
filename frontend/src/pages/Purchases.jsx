@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import purchaseService from '../services/purchase.service';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
@@ -9,9 +9,93 @@ import toast from 'react-hot-toast';
 
 const emptyItem = () => ({ productId: '', quantity: '1', price: '' });
 
+// ─── Supplier Autocomplete Input ──────────────────────────────────────────────
+const SupplierAutocomplete = ({ value, onChange, onSelect }) => {
+  const [query, setQuery]         = useState(value?.name || '');
+  const [results, setResults]     = useState([]);
+  const [showList, setShowList]   = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const debounce                  = useRef(null);
+  const containerRef              = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setShowList(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleInput = (e) => {
+    const val = e.target.value;
+    setQuery(val);
+    onChange({ name: val, phone: '', address: '', _id: null }); // clear saved supplier
+    clearTimeout(debounce.current);
+    if (val.trim().length < 1) { setResults([]); setShowList(false); return; }
+    debounce.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await api.get('/suppliers', { params: { search: val } });
+        setResults(res.data.data.suppliers || []);
+        setShowList(true);
+      } catch { setResults([]); }
+      finally { setLoading(false); }
+    }, 300);
+  };
+
+  const handlePick = (supplier) => {
+    setQuery(supplier.name);
+    setShowList(false);
+    onSelect(supplier); // auto-fill phone/address
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <label className="text-sm font-medium text-gray-700 block mb-1.5">
+        Supplier Name *
+        <span className="text-xs text-gray-400 font-normal ml-2">— type to search saved suppliers</span>
+      </label>
+      <input
+        value={query}
+        onChange={handleInput}
+        onFocus={() => query.length > 0 && results.length > 0 && setShowList(true)}
+        placeholder="e.g. Kalyani Agro Distributor"
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+      />
+      {loading && (
+        <span className="absolute right-3 top-9 text-xs text-gray-400">Searching…</span>
+      )}
+      {showList && results.length > 0 && (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+          {results.map((s) => (
+            <button
+              key={s._id}
+              type="button"
+              onClick={() => handlePick(s)}
+              className="w-full text-left px-4 py-2.5 hover:bg-green-50 border-b border-gray-100 last:border-0"
+            >
+              <div className="font-medium text-sm text-gray-800">{s.name}</div>
+              {s.phone && <div className="text-xs text-gray-400">{s.phone}</div>}
+              {s.address && <div className="text-xs text-gray-400 truncate">{s.address}</div>}
+            </button>
+          ))}
+          {/* Option to save as new supplier */}
+          <div className="px-4 py-2 text-xs text-gray-400 bg-gray-50 border-t">
+            Not found? Just type the name — it will be saved automatically.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Purchase Form Modal ──────────────────────────────────────────────────────
 const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
+  const [supplier, setSupplier]   = useState({ _id: null, name: '', phone: '', address: '' });
   const [form, setForm] = useState({
-    supplierName: '', supplierPhone: '', supplierAddress: '',
     paymentMode: 'cash', paidAmount: '', purchaseDate: '', notes: '',
   });
   const [items, setItems]         = useState([emptyItem()]);
@@ -25,7 +109,9 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
     api.get('/products', { params: { limit: 500 } })
       .then((r) => { if (!cancelled) setProducts(r.data.data.products.filter((p) => p.isActive)); })
       .catch(() => {});
-    setForm({ supplierName:'', supplierPhone:'', supplierAddress:'', paymentMode:'cash', paidAmount:'', purchaseDate:'', notes:'' });
+
+    setSupplier({ _id: null, name: '', phone: '', address: '' });
+    setForm({ paymentMode:'cash', paidAmount:'', purchaseDate:'', notes:'' });
     setItems([emptyItem()]);
     setErrors({});
     return () => { cancelled = true; };
@@ -43,15 +129,21 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.supplierName.trim()) { setErrors({ supplierName: 'Supplier name required' }); return; }
+    if (!supplier.name.trim()) { setErrors({ supplierName: 'Supplier name required' }); return; }
     const filled = items.filter((i) => i.productId);
     if (filled.length === 0) { toast.error('Add at least one product'); return; }
 
     setSubmitting(true);
     try {
       const payload = {
-        ...form,
-        paidAmount: Number(form.paidAmount) || 0,
+        supplierName:    supplier.name,
+        supplierPhone:   supplier.phone,
+        supplierAddress: supplier.address,
+        supplierId:      supplier._id || undefined,
+        paymentMode:     form.paymentMode,
+        paidAmount:      Number(form.paidAmount) || 0,
+        purchaseDate:    form.purchaseDate,
+        notes:           form.notes,
         items: filled.map((i) => {
           const prod = products.find((p) => p._id === i.productId);
           return { productId: i.productId, quantity: Number(i.quantity), price: Number(i.price) || prod?.pricePerUnit || 0 };
@@ -73,22 +165,40 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="📥 New Purchase (Stock In)" size="xl">
       <form onSubmit={handleSubmit} noValidate className="space-y-5">
+
+        {/* Supplier autocomplete section */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">Supplier Details</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input label="Supplier Name *" value={form.supplierName} error={errors.supplierName}
-              onChange={(e) => handleField('supplierName', e.target.value)} placeholder="e.g. Kalyani Agro Dist." />
-            <Input label="Phone" value={form.supplierPhone}
-              onChange={(e) => handleField('supplierPhone', e.target.value)} placeholder="Mobile number" />
-            <Input label="Purchase Date" type="date" value={form.purchaseDate}
-              onChange={(e) => handleField('purchaseDate', e.target.value)} />
+          <SupplierAutocomplete
+            value={supplier}
+            onChange={(s) => setSupplier((p) => ({ ...p, ...s }))}
+            onSelect={(s) => setSupplier({ _id: s._id, name: s.name, phone: s.phone || '', address: s.address || '' })}
+          />
+          {errors.supplierName && <p className="text-red-500 text-xs mt-1">{errors.supplierName}</p>}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+            <input
+              value={supplier.phone}
+              onChange={(e) => setSupplier((p) => ({ ...p, phone: e.target.value, _id: null }))}
+              placeholder="Phone number"
+              className={inp}
+            />
+            <input
+              value={supplier.address}
+              onChange={(e) => setSupplier((p) => ({ ...p, address: e.target.value, _id: null }))}
+              placeholder="Address (optional)"
+              className={inp + ' sm:col-span-2'}
+            />
           </div>
-          <div className="mt-3">
-            <Input label="Address" value={form.supplierAddress}
-              onChange={(e) => handleField('supplierAddress', e.target.value)} placeholder="Supplier address (optional)" />
-          </div>
+
+          {supplier._id && (
+            <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
+              ✓ Using saved supplier — details will be auto-filled next time
+            </div>
+          )}
         </div>
 
+        {/* Products table */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Products Purchased</p>
           <div className="overflow-x-auto">

@@ -21,6 +21,8 @@ const purchaseSchema = new mongoose.Schema(
   {
     // Auto-generated: PUR-YYYY-NNNN
     purchaseNumber: { type: String, unique: true, required: true },
+    
+    supplier:        { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier', default: null },
 
     // Supplier details (free-text, not linked to a collection)
     supplierName:    { type: String, required: true, trim: true },
@@ -49,6 +51,7 @@ const purchaseSchema = new mongoose.Schema(
 
 purchaseSchema.index({ purchaseNumber: 1 });
 purchaseSchema.index({ createdAt: -1 });
+purchaseSchema.index({ supplier: 1 });
 purchaseSchema.index({ supplierName: 'text' });
 
 module.exports = mongoose.model('Purchase', purchaseSchema);

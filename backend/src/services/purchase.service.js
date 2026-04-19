@@ -2,6 +2,7 @@
 
 const Purchase  = require('../models/purchase.model');
 const Product   = require('../models/product.model');
+const { findOrCreateSupplier } = require('./supplier.service');
 const { generatePurchaseNumber } = require('../utils/purchaseNumber');
 
 // ─── Create purchase (stock in) ───────────────────────────────────────────────
@@ -9,6 +10,7 @@ const createPurchase = async ({
   supplierName,
   supplierPhone = '',
   supplierAddress = '',
+  supplierId,
   items,
   paidAmount = 0,
   paymentMode = 'cash',
@@ -16,6 +18,21 @@ const createPurchase = async ({
   notes = '',
   userId,
 }) => {
+
+  // Find or create supplier record — saves details for future use
+  let supplier;
+  if (supplierId) {
+    const Supplier = require('../models/supplier.model');
+    supplier = await Supplier.findById(supplierId);
+    if (!supplier) throw { status: 404, message: 'Supplier not found' };
+  } else {
+    supplier = await findOrCreateSupplier({
+      name: supplierName,
+      phone: supplierPhone,
+      address: supplierAddress,
+    });
+  }
+
   // Validate and build items
   const purchaseItems = [];
   let totalAmount = 0;
@@ -47,9 +64,10 @@ const createPurchase = async ({
 
   const purchase = await Purchase.create({
     purchaseNumber,
-    supplierName:    supplierName.trim(),
-    supplierPhone:   supplierPhone.trim(),
-    supplierAddress: supplierAddress.trim(),
+    supplier:        supplier._id,
+    supplierName:    supplier.name,
+    supplierPhone:   supplier.phone,
+    supplierAddress: supplier.address,
     items:           purchaseItems,
     totalAmount,
     paidAmount:      paid,
@@ -72,8 +90,13 @@ const createPurchase = async ({
   return purchase;
 };
 
-const getAllPurchases = async ({ page = 1, limit = 20, search, from, to } = {}) => {
+const getAllPurchases = async ({ page = 1, limit = 20, search, from, to, supplierId } = {}) => {
   const filter = {};
+
+  if (supplierId) {
+    filter.supplier = supplierId;
+  }
+
   if (search) {
     const e = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     filter.$or = [
@@ -89,8 +112,13 @@ const getAllPurchases = async ({ page = 1, limit = 20, search, from, to } = {}) 
 
   const skip = (Number(page) - 1) * Number(limit);
   const [purchases, total] = await Promise.all([
-    Purchase.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit))
-      .populate('createdBy', 'name').lean(),
+    Purchase.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit))
+      .populate('createdBy', 'name')
+      .populate('supplier', 'name phone')
+      .lean(),
     Purchase.countDocuments(filter),
   ]);
 
@@ -101,7 +129,10 @@ const getAllPurchases = async ({ page = 1, limit = 20, search, from, to } = {}) 
 };
 
 const getPurchaseById = async (id) => {
-  const purchase = await Purchase.findById(id).populate('createdBy', 'name').lean();
+  const purchase = await Purchase.findById(id)
+    .populate('createdBy', 'name')
+    .populate('supplier', 'name phone address')
+    .lean();
   if (!purchase) throw { status: 404, message: 'Purchase not found' };
   return purchase;
 };

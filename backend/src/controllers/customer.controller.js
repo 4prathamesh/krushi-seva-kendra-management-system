@@ -8,9 +8,7 @@ const { sendSuccess, sendError } = require('../utils/responseHandler');
 
 const getAllCustomers = async (req, res, next) => {
   try {
-    console.log('Fetching customers with query:', req.query);
     const result = await customerService.getAllCustomers(req.query);
-    console.log('Fetched customers:', result);
     return sendSuccess(res, 200, 'Customers fetched', result);
   } catch (err) {
     if (err.status) return sendError(res, err.status, err.message);
