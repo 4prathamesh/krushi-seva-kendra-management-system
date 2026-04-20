@@ -49,7 +49,6 @@ const purchaseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-purchaseSchema.index({ purchaseNumber: 1 });
 purchaseSchema.index({ createdAt: -1 });
 purchaseSchema.index({ supplier: 1 });
 purchaseSchema.index({ supplierName: 'text' });
