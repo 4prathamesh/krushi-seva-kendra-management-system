@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import QuickAddProduct from '../components/common/QuickAddProduct';
 import { useDispatch } from 'react-redux';
 import { createInvoice } from '../features/invoices/invoiceSlice';
 import Input from '../components/common/Input';
@@ -59,10 +60,16 @@ const emptyItem = () => ({
 });
 
 // ─── Item Row ─────────────────────────────────────────────────────────────────
-const ItemRow = ({ item, index, products, onChange, onRemove, errors = {} }) => {
+const ItemRow = ({ item, index, products, onChange, onRemove, onOpenQuickAdd, errors = {} }) => {
   const selectedProd = products.find((p) => p._id === item.productId);
 
   const handleProductChange = (productId) => {
+
+    if (productId === '__new__') { 
+      onOpenQuickAdd(index); 
+      return; 
+    }
+
     const prod = products.find((p) => p._id === productId);
     if (!prod) { onChange(index, emptyItem()); return; }
     const updated = {
@@ -88,6 +95,8 @@ const ItemRow = ({ item, index, products, onChange, onRemove, errors = {} }) => 
         <select value={item.productId} onChange={(e) => handleProductChange(e.target.value)}
           className={inp(errors.productId) + ' min-w-[180px]'}>
           <option value="">Select product</option>
+          <option value="__new__" className="text-green-700 font-semibold">+ Add New Product</option>
+          <option disabled>──────────────</option>
           {products.map((p) => (
             <option key={p._id} value={p._id} disabled={p.stock === 0}>
               {p.name} — ₹{p.pricePerUnit} (Stk: {p.stock})
@@ -152,6 +161,8 @@ const Billing = () => {
   const [lookingUp, setLookingUp]         = useState(false);
   const [foundCustomer, setFoundCustomer] = useState(null); // null | customer object
   const lookupTimer                       = useRef(null);
+  
+  const [quickAdd, setQuickAdd ] = useState({ open: false, rowIndex: null }); // For quick-adding products from item rows
 
   // ── Load products ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -430,6 +441,7 @@ const Billing = () => {
                     items.map((item, idx) => (
                       <ItemRow key={idx} item={item} index={idx} products={products}
                         onChange={handleItemChange} onRemove={removeItem}
+                        onOpenQuickAdd={(idx) => setQuickAdd({ open: true, rowIndex: idx })}
                         errors={errors.itemErrs?.[idx] || {}} />
                     ))
                   )}
@@ -498,6 +510,35 @@ const Billing = () => {
       </div>
 
       {printInvoice && <InvoicePrint invoice={printInvoice} onClose={() => setPrintInv(null)} />}
+      {/* Quick-add product — opens inside billing without losing the invoice context */}
+      <QuickAddProduct
+        isOpen={quickAdd.open}
+        onClose={() => setQuickAdd({ open: false, rowIndex: null })}
+        onCreated={(newProduct) => {
+          // Add to local product list so dropdown shows it immediately
+          setProducts((prev) => [...prev, newProduct]);
+          // Auto-select the new product in the row that opened this dialog
+          if (quickAdd.rowIndex !== null) {
+            const prod = newProduct;
+            const updated = {
+              ...emptyItem(),
+              productId:   prod._id,
+              productName: prod.name,
+              hsn:    prod.hsn    || '',
+              batch:  prod.batch  || '',
+              expiry: prod.expiry || '',
+              price:  String(prod.pricePerUnit),
+              gstRate: String(prod.gstRate ?? 0),
+              quantity: '1',
+            };
+            handleItemChange(quickAdd.rowIndex, {
+              ...updated,
+              ...calcLine(updated.price, updated.quantity, updated.gstRate),
+            });
+          }
+          setQuickAdd({ open: false, rowIndex: null });
+        }}
+      />
     </>
   );
 };

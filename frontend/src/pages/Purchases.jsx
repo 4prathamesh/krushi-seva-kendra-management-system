@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import QuickAddProduct from '../components/common/QuickAddProduct';
 import purchaseService from '../services/purchase.service';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
@@ -102,6 +103,7 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
   const [products, setProducts]   = useState([]);
   const [errors, setErrors]       = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [quickAdd, setQuickAdd]       = useState({ open: false, rowIndex: null, name: '' });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -217,25 +219,47 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
                   return (
                     <tr key={idx} className="border-b border-gray-100 align-top">
                       <td className="px-1 py-1">
-                        <select value={item.productId} onChange={(e) => handleItem(idx, 'productId', e.target.value)} className={inp + ' min-w-[180px]'}>
+                        <select
+                          value={item.productId}
+                          onChange={(e) => {
+                            if (e.target.value === '__new__') {
+                              setQuickAdd({ open: true, rowIndex: idx, name: '' });
+                              return;
+                            }
+                            const p = products.find((x) => x._id === e.target.value);
+                            handleItem(idx, 'productId', e.target.value);
+                            if (p) handleItem(idx, 'price', String(p.pricePerUnit));
+                          }}
+                          className={inp + ' min-w-[180px]'}
+                        >
                           <option value="">Select product</option>
-                          {products.map((p) => <option key={p._id} value={p._id}>{p.name} (Stock: {p.stock})</option>)}
+                          <option value="__new__" className="text-green-700 font-semibold">
+                            + Add New Product
+                          </option>
+                          <option disabled>──────────────</option>
+                          {products.map((p) => (
+                            <option key={p._id} value={p._id}>{p.name} (Stock: {p.stock})</option>
+                          ))}
                         </select>
                       </td>
                       <td className="px-1 py-1">
                         <input type="number" min="1" value={item.quantity}
-                          onChange={(e) => handleItem(idx, 'quantity', e.target.value)} className={inp + ' w-16 text-right'} />
+                          onChange={(e) => handleItem(idx, 'quantity', e.target.value)}
+                          className={inp + ' w-16 text-right'} />
                       </td>
                       <td className="px-1 py-1">
                         <input type="number" min="0" step="0.01"
-                          value={item.price} placeholder={prod ? String(prod.pricePerUnit) : '0'}
-                          onChange={(e) => handleItem(idx, 'price', e.target.value)} className={inp + ' w-24 text-right'} />
+                          value={item.price}
+                          placeholder={prod ? String(prod.pricePerUnit) : '0'}
+                          onChange={(e) => handleItem(idx, 'price', e.target.value)}
+                          className={inp + ' w-24 text-right'} />
                       </td>
                       <td className="px-1 py-1 text-right text-xs font-semibold text-gray-700 w-20">
                         ₹{lineTotal.toFixed(2)}
                       </td>
                       <td className="px-1 py-1 text-center w-8">
-                        <button type="button" onClick={() => removeItem(idx)} className="text-red-400 hover:text-red-600 text-lg font-bold">×</button>
+                        <button type="button" onClick={() => removeItem(idx)}
+                          className="text-red-400 hover:text-red-600 text-lg font-bold">×</button>
                       </td>
                     </tr>
                   );
@@ -269,6 +293,23 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
           <Button type="submit" loading={submitting}>📥 Record Purchase &amp; Update Stock</Button>
         </div>
       </form>
+
+      {/* Quick-add product inline — opens without closing the purchase form */}
+      <QuickAddProduct
+        isOpen={quickAdd.open}
+        onClose={() => setQuickAdd({ open: false, rowIndex: null, name: '' })}
+        initialName={quickAdd.name}
+        onCreated={(newProduct) => {
+          // Add new product to local list so it appears in dropdown immediately
+          setProducts((prev) => [...prev, newProduct]);
+          // Auto-select it in the row that triggered the quick-add
+          if (quickAdd.rowIndex !== null) {
+            handleItem(quickAdd.rowIndex, 'productId', newProduct._id);
+            handleItem(quickAdd.rowIndex, 'price', String(newProduct.pricePerUnit));
+          }
+          setQuickAdd({ open: false, rowIndex: null, name: '' });
+        }}
+      />
     </Modal>
   );
 };
