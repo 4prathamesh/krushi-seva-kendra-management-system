@@ -33,8 +33,7 @@ const protect = async (req, res, next) => {
 
 const authorizeRoles = (...roles) => {
   return (req, res, next) => {
-    
-    if (!roles.includes(req.body.role || req.user.role)) {
+    if (!roles.includes(req.user.role)) {
       return sendError(res, 403, `Access denied. Required roles: ${roles.join(', ')}`);
     }
     next();
