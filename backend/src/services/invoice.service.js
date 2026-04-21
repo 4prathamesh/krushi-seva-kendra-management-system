@@ -8,6 +8,8 @@ const { calcLineGST, calcOrderTotals } = require('../utils/gst');
 const { generateInvoiceNumber }        = require('../utils/invoiceNumber');
 const { amountInWords }                = require('../utils/amountInWords');
 
+const mongoose = require('mongoose');
+
 // ─── 1. SMART CUSTOMER LOOKUP / AUTO-CREATE ──────────────────────────────────
 /**
  * findOrCreateCustomer
@@ -128,24 +130,81 @@ const chargeCredit = async ({ customerId, invoiceId, amount, note, userId }) => 
 };
 
 const applyPayment = async ({ customerId, amount, note, userId }) => {
-  if (amount <= 0) return;
-  const customer = await Customer.findById(customerId);
-  if (!customer) throw { status: 404, message: 'Customer not found' };
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const applied = Math.min(amount, customer.creditBalance); // never reduce below 0
-  if (applied <= 0) throw { status: 400, message: 'Customer has no outstanding credit balance' };
+  try {
+    let remaining = amount;
 
-  await CreditTransaction.create({
-    customer: customerId,
-    type:     'payment',
-    amount:   applied,
-    note:     note || 'Credit payment received',
-    createdBy: userId,
-  });
+    // 1. Get all unpaid invoices (FIFO)
+    const invoices = await Invoice.find({
+      customer: customerId,
+      isCancelled: false,
+      paymentStatus: { $in: ['partial', 'credit'] }
+    })
+      .sort({ createdAt: 1 })
+      .session(session);
 
-  customer.creditBalance = Math.max(0, customer.creditBalance - applied);
-  await customer.save(); // triggers pre-save paymentStatus update
-  return { applied, remainingCredit: customer.creditBalance };
+    if (!invoices.length) {
+      throw new Error('No pending invoices');
+    }
+
+    // 2. Apply payment invoice by invoice
+    for (let invoice of invoices) {
+      if (remaining <= 0) break;
+
+      const due = invoice.dueAmount;
+
+      if (due <= 0) continue;
+
+      const payAmount = Math.min(remaining, due);
+
+      // update invoice
+      invoice.paidAmount += payAmount;
+      invoice.dueAmount -= payAmount;
+
+      // update status
+      if (invoice.dueAmount === 0) {
+        invoice.paymentStatus = 'paid';
+        invoice.status = 'paid';
+      } else {
+        invoice.paymentStatus = 'partial';
+        invoice.status = 'partial';
+      }
+
+      await invoice.save({ session });
+
+      // reduce remaining
+      remaining -= payAmount;
+    }
+
+    // 3. Create credit transaction (single entry)
+    await CreditTransaction.create([{
+      customer: customerId,
+      type: 'payment',
+      amount: amount - remaining,
+      createdBy: userId,
+      note: note || 'Payment adjusted to invoices'
+    }], { session });
+
+    // 4. Update customer credit balance
+    const customer = await Customer.findById(customerId).session(session);
+    customer.creditBalance = Math.max(0, customer.creditBalance - (amount - remaining));
+    await customer.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+    
+    return {
+      applied: amount - remaining,
+      remainingCredit: customer.creditBalance
+    };
+
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
+  }
 };
 
 // ─── 6. CREATE INVOICE ────────────────────────────────────────────────────────
