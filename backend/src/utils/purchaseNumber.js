@@ -1,6 +1,6 @@
-const Purchase = require('../models/purchase.model');
+import Purchase from '../models/purchase.model.js';
 
-const generatePurchaseNumber = async () => {
+export const generatePurchaseNumber = async () => {
   const year   = new Date().getFullYear();
   const prefix = `PUR-${year}-`;
 
@@ -17,5 +17,3 @@ const generatePurchaseNumber = async () => {
   }
   return `${prefix}${String(nextSeq).padStart(4, '0')}`;
 };
-
-module.exports = { generatePurchaseNumber };

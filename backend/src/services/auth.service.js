@@ -2,10 +2,10 @@
  * Auth Service — user authentication business logic.
  */
 
-const User          = require('../models/user.model');
-const generateToken = require('../utils/generateToken');
+import User from '../models/user.model.js';
+import generateToken from '../utils/generateToken.js';
 
-const registerUser = async ({ name, email, password, role, phone }) => {
+export const registerUser = async ({ name, email, password, role, phone }) => {
   const existing = await User.findOne({ email });
   if (existing) throw { status: 409, message: 'Email already registered' };
   const user  = await User.create({ name, email, password, role, phone });
@@ -16,7 +16,7 @@ const registerUser = async ({ name, email, password, role, phone }) => {
   };
 };
 
-const loginUser = async ({ email, password }) => {
+export const loginUser = async ({ email, password }) => {
   const user = await User.findOne({ email }).select('+password');
   if (!user || !(await user.comparePassword(password)))
     throw { status: 401, message: 'Invalid email or password' };
@@ -29,11 +29,11 @@ const loginUser = async ({ email, password }) => {
   };
 };
 
-const getAllUsers = async () => {
+export const getAllUsers = async () => {
   return User.find().select('-password').sort({ createdAt: -1 });
 };
 
-const updateUser = async (id, requestingUserId, data) => {
+export const updateUser = async (id, requestingUserId, data) => {
   if (id === requestingUserId.toString())
     throw { status: 400, message: 'You cannot modify your own account status' };
   const user = await User.findByIdAndUpdate(id, data, { new: true }).select('-password');
@@ -41,12 +41,10 @@ const updateUser = async (id, requestingUserId, data) => {
   return user;
 };
 
-const changePassword = async (userId, { currentPassword, newPassword }) => {
+export const changePassword = async (userId, { currentPassword, newPassword }) => {
   const user = await User.findById(userId).select('+password');
   if (!(await user.comparePassword(currentPassword)))
     throw { status: 400, message: 'Current password is incorrect' };
   user.password = newPassword;
   await user.save();
 };
-
-module.exports = { registerUser, loginUser, getAllUsers, updateUser, changePassword };

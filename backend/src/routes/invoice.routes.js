@@ -1,7 +1,5 @@
-const express = require('express');
-const router  = express.Router();
-
-const {
+import express from 'express';
+import {
   createInvoice, 
   lookupCustomer, 
   recordCreditPayment, 
@@ -11,10 +9,11 @@ const {
   cancelInvoice,
   getGSTReport,
   getDashboardStats,
-} = require('../controllers/invoice.controller');
+} from '../controllers/invoice.controller.js';
+import protect, { authorizeRoles } from '../middleware/auth.middleware.js';
+import { createInvoiceValidation } from '../validations/invoice.validation.js';
 
-const { protect, authorizeRoles } = require('../middleware/auth.middleware');
-const { createInvoiceValidation } = require('../validations/invoice.validation');
+const router = express.Router();
 
 // GST report must come before /:id to avoid route shadowing
 router.get('/dashboard-stats', protect, getDashboardStats);
@@ -28,4 +27,4 @@ router.get('/:id', protect, getInvoiceById);
 router.post('/',   protect, createInvoiceValidation, createInvoice);
 router.delete('/:id', protect, authorizeRoles('admin'), cancelInvoice);
 
-module.exports = router;
+export default router;

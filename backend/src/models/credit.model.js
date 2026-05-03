@@ -9,7 +9,7 @@
  * Customer document (creditBalance) for fast reads. This ledger provides
  * the full audit trail.
  */
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const creditSchema = new mongoose.Schema(
   {
@@ -39,4 +39,4 @@ const creditSchema = new mongoose.Schema(
 creditSchema.index({ customer: 1, createdAt: -1 });
 creditSchema.index({ invoice: 1 });
 
-module.exports = mongoose.model('CreditTransaction', creditSchema);
+export default mongoose.model('CreditTransaction', creditSchema);

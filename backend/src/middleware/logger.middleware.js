@@ -1,4 +1,4 @@
-const logger = require('../utils/logger');
+import logger from '../utils/logger.js';
 
 const loggerMiddleware = (req, res, next) => {
   const start = Date.now();
@@ -9,4 +9,4 @@ const loggerMiddleware = (req, res, next) => {
   next();
 };
 
-module.exports = loggerMiddleware;
+export default loggerMiddleware;

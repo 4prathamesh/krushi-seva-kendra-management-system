@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { STOCK_STATUS } = require('../constants/status');
+import mongoose from 'mongoose';
+import { STOCK_STATUS } from '../constants/status.js';
 
 const productSchema = new mongoose.Schema(
   {
@@ -66,4 +66,4 @@ productSchema.pre('save', function (next) {
   next();
 });
 
-module.exports = mongoose.model('Product', productSchema);
+export default mongoose.model('Product', productSchema);

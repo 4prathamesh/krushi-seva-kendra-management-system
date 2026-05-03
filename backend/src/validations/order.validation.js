@@ -1,5 +1,5 @@
-const { body, validationResult } = require('express-validator');
-const { sendError } = require('../utils/responseHandler');
+import { body, validationResult } from 'express-validator';
+import { sendError } from '../utils/responseHandler.js';
 
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
@@ -9,7 +9,7 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-const orderValidation = [
+export const orderValidation = [
   body('customer').notEmpty().withMessage('Customer ID is required'),
   body('items').isArray({ min: 1 }).withMessage('At least one item is required'),
   body('items.*.product').notEmpty().withMessage('Product ID is required for each item'),
@@ -21,5 +21,3 @@ const orderValidation = [
     .withMessage('Invalid payment method'),
   handleValidationErrors,
 ];
-
-module.exports = { orderValidation };

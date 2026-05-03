@@ -1,9 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-
-const {
+import express from 'express';
+import multer from 'multer';
+import path from 'path';
+import {
   getAllProducts,
   getProductById,
   createProduct,
@@ -11,9 +9,11 @@ const {
   deleteProduct,
   updateStock,
   getLowStockProducts,
-} = require('../controllers/product.controller');
-const { protect, authorizeRoles } = require('../middleware/auth.middleware');
-const { productValidation } = require('../validations/product.validation');
+} from '../controllers/product.controller.js';
+import protect, { authorizeRoles } from '../middleware/auth.middleware.js';
+import { productValidation } from '../validations/product.validation.js';
+
+const router = express.Router();
 
 // Multer config for product images
 const storage = multer.diskStorage({
@@ -31,4 +31,4 @@ router.put('/:id', protect, authorizeRoles('admin'), updateProduct);
 router.patch('/:id/stock', protect, updateStock);
 router.delete('/:id', protect, authorizeRoles('admin'), deleteProduct);
 
-module.exports = router;
+export default router;

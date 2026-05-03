@@ -1,5 +1,5 @@
-const { body, validationResult } = require('express-validator');
-const { sendError } = require('../utils/responseHandler');
+import { body, validationResult } from 'express-validator';
+import { sendError } from '../utils/responseHandler.js';
 
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
@@ -9,7 +9,7 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-const registerValidation = [
+export const registerValidation = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
@@ -17,10 +17,8 @@ const registerValidation = [
   handleValidationErrors,
 ];
 
-const loginValidation = [
+export const loginValidation = [
   body('email').isEmail().withMessage('Valid email is required'),
   body('password').notEmpty().withMessage('Password is required'),
   handleValidationErrors,
 ];
-
-module.exports = { registerValidation, loginValidation };

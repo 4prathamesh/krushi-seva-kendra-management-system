@@ -1,7 +1,7 @@
 'use strict';
 
-const purchaseService = require('../services/purchase.service');
-const { sendSuccess, sendError } = require('../utils/responseHandler');
+import * as purchaseService from '../services/purchase.service.js';
+import { sendSuccess, sendError } from '../utils/responseHandler.js';
 
 const createPurchase = async (req, res, next) => {
   try {
@@ -30,4 +30,4 @@ const getPurchaseById = async (req, res, next) => {
   }
 };
 
-module.exports = { createPurchase, getAllPurchases, getPurchaseById };
+export { createPurchase, getAllPurchases, getPurchaseById };

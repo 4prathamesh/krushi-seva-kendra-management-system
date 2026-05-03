@@ -4,8 +4,8 @@
  * All business logic lives in src/services/invoice.service.js
  */
 
-const invoiceService = require('../services/invoice.service');
-const { sendSuccess, sendError } = require('../utils/responseHandler');
+import * as invoiceService from '../services/invoice.service.js';
+import { sendSuccess, sendError } from '../utils/responseHandler.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/invoices
@@ -128,7 +128,7 @@ const getDashboardStats = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   createInvoice, 
   lookupCustomer, 
   recordCreditPayment, 

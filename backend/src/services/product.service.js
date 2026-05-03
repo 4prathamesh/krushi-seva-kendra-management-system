@@ -3,7 +3,7 @@
  * Controller stays thin: parse request → call service → send response.
  */
 
-const Product = require('../models/product.model');
+import Product from '../models/product.model.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // buildFilter — shared query builder
@@ -22,7 +22,7 @@ const buildFilter = ({ search, category, stockStatus } = {}) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // getAllProducts — paginated list with search + category + stock filter
 // ─────────────────────────────────────────────────────────────────────────────
-const getAllProducts = async ({ search, category, stockStatus, page = 1, limit = 10 } = {}) => {
+export const getAllProducts = async ({ search, category, stockStatus, page = 1, limit = 10 } = {}) => {
   const filter = buildFilter({ search, category, stockStatus });
   const skip   = (Number(page) - 1) * Number(limit);
 
@@ -45,7 +45,7 @@ const getAllProducts = async ({ search, category, stockStatus, page = 1, limit =
 // ─────────────────────────────────────────────────────────────────────────────
 // getProductById
 // ─────────────────────────────────────────────────────────────────────────────
-const getProductById = async (id) => {
+export const getProductById = async (id) => {
   const product = await Product.findById(id);
   if (!product) throw { status: 404, message: 'Product not found' };
   return product;
@@ -54,7 +54,7 @@ const getProductById = async (id) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // getLowStockProducts
 // ─────────────────────────────────────────────────────────────────────────────
-const getLowStockProducts = async () => {
+export const getLowStockProducts = async () => {
   return Product.find({
     isActive: true,
     stockStatus: { $in: ['low_stock', 'out_of_stock'] },
@@ -64,14 +64,14 @@ const getLowStockProducts = async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // createProduct
 // ─────────────────────────────────────────────────────────────────────────────
-const createProduct = async (data) => {
+export const createProduct = async (data) => {
   return Product.create(data);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // updateProduct
 // ─────────────────────────────────────────────────────────────────────────────
-const updateProduct = async (id, data) => {
+export const updateProduct = async (id, data) => {
   const product = await Product.findById(id);
   if (!product) throw { status: 404, message: 'Product not found' };
 
@@ -89,7 +89,7 @@ const updateProduct = async (id, data) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // updateStock — dedicated stock adjustment (also used by StockEditModal)
 // ─────────────────────────────────────────────────────────────────────────────
-const updateStock = async (id, stock) => {
+export const updateStock = async (id, stock) => {
   const product = await Product.findById(id);
   if (!product) throw { status: 404, message: 'Product not found' };
   if (stock === undefined || stock === null)
@@ -102,7 +102,7 @@ const updateStock = async (id, stock) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // deleteProduct — soft delete (isActive = false)
 // ─────────────────────────────────────────────────────────────────────────────
-const deleteProduct = async (id) => {
+export const deleteProduct = async (id) => {
   const product = await Product.findByIdAndUpdate(
     id,
     { isActive: false },
@@ -110,14 +110,4 @@ const deleteProduct = async (id) => {
   );
   if (!product) throw { status: 404, message: 'Product not found' };
   return product;
-};
-
-module.exports = {
-  getAllProducts,
-  getProductById,
-  getLowStockProducts,
-  createProduct,
-  updateProduct,
-  updateStock,
-  deleteProduct,
 };

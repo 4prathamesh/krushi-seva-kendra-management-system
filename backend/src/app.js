@@ -1,30 +1,36 @@
 'use strict';
 
-const express    = require('express');
-const cors       = require('cors');
-const morgan     = require('morgan');
-const path       = require('path');
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Security packages (install: npm i helmet express-rate-limit)
 let helmet, rateLimit;
 try {
-  helmet    = require('helmet');
-  rateLimit = require('express-rate-limit');
+  const helmetModule = await import('helmet');
+  const rateLimitModule = await import('express-rate-limit');
+  helmet = helmetModule.default;
+  rateLimit = rateLimitModule.default;
 } catch (_) {
   // Graceful fallback if packages not yet installed
-  helmet    = () => (_, __, next) => next();
+  helmet = () => (_, __, next) => next();
   rateLimit = () => (_, __, next) => next();
 }
 
-const authRoutes     = require('./routes/auth.routes');
-const productRoutes  = require('./routes/product.routes');
-const customerRoutes = require('./routes/customer.routes');
-const invoiceRoutes  = require('./routes/invoice.routes');
-const purchaseRoutes = require('./routes/purchase.routes');
-const supplierRoutes  = require('./routes/supplier.routes');
+import authRoutes from './routes/auth.routes.js';
+import productRoutes from './routes/product.routes.js';
+import customerRoutes from './routes/customer.routes.js';
+import invoiceRoutes from './routes/invoice.routes.js';
+import purchaseRoutes from './routes/purchase.routes.js';
+import supplierRoutes from './routes/supplier.routes.js';
+import errorMiddleware from './middleware/error.middleware.js';
+import loggerMiddleware from './middleware/logger.middleware.js';
 
-const errorMiddleware  = require('./middleware/error.middleware');
-const loggerMiddleware = require('./middleware/logger.middleware');
+// Get __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -106,4 +112,4 @@ app.use((_req, res) => {
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 app.use(errorMiddleware);
 
-module.exports = app;
+export default app;

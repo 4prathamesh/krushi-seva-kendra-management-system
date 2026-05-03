@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const customerSchema = new mongoose.Schema(
   {
@@ -43,4 +43,4 @@ customerSchema.pre('save', function (next) {
 customerSchema.index({ name: 'text' });
 customerSchema.index({ creditBalance: 1 });
 
-module.exports = mongoose.model('Customer', customerSchema);
+export default mongoose.model('Customer', customerSchema);

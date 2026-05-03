@@ -28,12 +28,10 @@ const numToWords = (n) => {
  * @param {number} amount  - e.g. 20000.50
  * @returns {string}       - e.g. "Twenty Thousand Rupees and Fifty Paise Only."
  */
-const amountInWords = (amount) => {
+export const amountInWords = (amount) => {
   const rupees = Math.floor(amount);
   const paise  = Math.round((amount - rupees) * 100);
   let words = numToWords(rupees) + ' Rupee' + (rupees !== 1 ? 's' : '');
   if (paise > 0) words += ' and ' + numToWords(paise) + ' Paise';
   return words + ' Only.';
 };
-
-module.exports = { amountInWords };

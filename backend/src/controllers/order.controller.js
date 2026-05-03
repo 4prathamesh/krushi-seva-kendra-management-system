@@ -1,7 +1,7 @@
-const Order = require('../models/order.model');
-const Product = require('../models/product.model');
-const Customer = require('../models/customer.model');
-const { sendSuccess, sendError } = require('../utils/responseHandler');
+import Order from '../models/order.model.js';
+import Product from '../models/product.model.js';
+import Customer from '../models/customer.model.js';
+import { sendSuccess, sendError } from '../utils/responseHandler.js';
 
 // @desc    Get all orders
 // @route   GET /api/orders
@@ -189,7 +189,7 @@ const getDashboardStats = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   getAllOrders,
   getOrderById,
   createOrder,

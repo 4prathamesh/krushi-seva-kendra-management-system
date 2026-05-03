@@ -4,7 +4,7 @@
  * When a purchase is saved, stock for each product increases.
  * This is the counterpart to invoices (which decrease stock).
  */
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const purchaseItemSchema = new mongoose.Schema(
   {
@@ -53,4 +53,4 @@ purchaseSchema.index({ createdAt: -1 });
 purchaseSchema.index({ supplier: 1 });
 purchaseSchema.index({ supplierName: 'text' });
 
-module.exports = mongoose.model('Purchase', purchaseSchema);
+export default mongoose.model('Purchase', purchaseSchema);

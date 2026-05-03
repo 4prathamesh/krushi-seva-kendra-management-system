@@ -1,6 +1,6 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/user.model');
-const { sendError } = require('../utils/responseHandler');
+import jwt from 'jsonwebtoken';
+import User from '../models/user.model.js';
+import { sendError } from '../utils/responseHandler.js';
 
 const protect = async (req, res, next) => {
   try {
@@ -31,7 +31,7 @@ const protect = async (req, res, next) => {
   }
 };
 
-const authorizeRoles = (...roles) => {
+export const authorizeRoles = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return sendError(res, 403, `Access denied. Required roles: ${roles.join(', ')}`);
@@ -40,4 +40,4 @@ const authorizeRoles = (...roles) => {
   };
 };
 
-module.exports = { protect, authorizeRoles };
+export default protect;

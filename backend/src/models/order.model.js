@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { ORDER_STATUS, PAYMENT_STATUS } = require('../constants/status');
+import mongoose from 'mongoose';
+import { ORDER_STATUS, PAYMENT_STATUS } from '../constants/status.js';
 
 const orderItemSchema = new mongoose.Schema({
   product: {
@@ -66,4 +66,4 @@ orderSchema.pre('save', async function (next) {
   next();
 });
 
-module.exports = mongoose.model('Order', orderSchema);
+export default mongoose.model('Order', orderSchema);

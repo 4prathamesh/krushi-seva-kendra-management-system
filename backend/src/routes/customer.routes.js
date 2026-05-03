@@ -1,7 +1,5 @@
-const express = require('express');
-const router = express.Router();
-
-const {
+import express from 'express';
+import {
   getAllCustomers,
   getDistinctVillages,
   getCustomerById,
@@ -9,8 +7,10 @@ const {
   createCustomer,
   updateCustomer,
   deleteCustomer,
-} = require('../controllers/customer.controller');
-const { protect, authorizeRoles } = require('../middleware/auth.middleware');
+} from '../controllers/customer.controller.js';
+import protect, { authorizeRoles } from '../middleware/auth.middleware.js';
+
+const router = express.Router();
 
 router.get('/villages',        protect, getDistinctVillages);  // dropdown list
 router.get('/',                  protect, getAllCustomers);
@@ -20,4 +20,4 @@ router.post('/',                 protect, createCustomer);
 router.put('/:id',               protect, updateCustomer);
 router.delete('/:id',            protect, authorizeRoles('admin'), deleteCustomer);
 
-module.exports = router;
+export default router;

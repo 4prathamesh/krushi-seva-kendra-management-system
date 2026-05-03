@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // ─── GST Item Schema ──────────────────────────────────────────────────────────
 // Extends the plain order item with GST-specific fields required for the bill
@@ -81,4 +81,4 @@ invoiceSchema.index({ customer: 1, createdAt: -1 });
 invoiceSchema.index({ customerName: 'text', invoiceNumber: 'text', mobile: 'text' });
 invoiceSchema.index({ status: 1, createdAt: -1 });
 
-module.exports = mongoose.model('Invoice', invoiceSchema);
+export default mongoose.model('Invoice', invoiceSchema);

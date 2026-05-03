@@ -17,7 +17,7 @@
  * @param {number} gstRate    - GST percentage (e.g. 12, 18)
  * @returns {{ gstAmount, cgst, sgst, lineSubtotal, lineTotal }}
  */
-const calcLineGST = (price, quantity, gstRate) => {
+export const calcLineGST = (price, quantity, gstRate) => {
   const lineSubtotal = round2(price * quantity);
   const gstAmount    = round2(lineSubtotal * (gstRate / 100));
   const cgst         = round2(gstAmount / 2);
@@ -33,7 +33,7 @@ const calcLineGST = (price, quantity, gstRate) => {
  * @param {Array} lines  - Array of objects with { lineSubtotal, cgst, sgst, lineTotal }
  * @returns {{ subTotal, cgstTotal, sgstTotal, totalGST, grandTotal }}
  */
-const calcOrderTotals = (lines) => {
+export const calcOrderTotals = (lines) => {
   const subTotal  = round2(lines.reduce((s, l) => s + l.lineSubtotal, 0));
   const cgstTotal = round2(lines.reduce((s, l) => s + l.cgst, 0));
   const sgstTotal = round2(lines.reduce((s, l) => s + l.sgst, 0));
@@ -42,6 +42,4 @@ const calcOrderTotals = (lines) => {
   return { subTotal, cgstTotal, sgstTotal, totalGST, grandTotal };
 };
 
-const round2 = (n) => Math.round(n * 100) / 100;
-
-module.exports = { calcLineGST, calcOrderTotals, round2 };
+export const round2 = (n) => Math.round(n * 100) / 100;

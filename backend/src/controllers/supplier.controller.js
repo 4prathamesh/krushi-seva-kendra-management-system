@@ -1,7 +1,7 @@
 'use strict';
 
-const supplierService = require('../services/supplier.service');
-const { sendSuccess, sendError } = require('../utils/responseHandler');
+import * as supplierService from '../services/supplier.service.js';
+import { sendSuccess, sendError } from '../utils/responseHandler.js';
 
 const getAllSuppliers = async (req, res, next) => {
   try {
@@ -31,4 +31,4 @@ const updateSupplier = async (req, res, next) => {
   }
 };
 
-module.exports = { getAllSuppliers, createSupplier, updateSupplier };
+export { getAllSuppliers, createSupplier, updateSupplier };

@@ -1,5 +1,5 @@
-const { body, validationResult } = require('express-validator');
-const { sendError } = require('../utils/responseHandler');
+import { body, validationResult } from 'express-validator';
+import { sendError } from '../utils/responseHandler.js';
 
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
@@ -9,7 +9,7 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-const productValidation = [
+export const productValidation = [
   body('name').trim().notEmpty().withMessage('Product name is required'),
   body('category')
     .isIn(['seed', 'fertilizer', 'pesticide', 'tool', 'other'])
@@ -21,5 +21,3 @@ const productValidation = [
   body('stock').isInt({ min: 0 }).withMessage('Stock must be a non-negative integer'),
   handleValidationErrors,
 ];
-
-module.exports = { productValidation };

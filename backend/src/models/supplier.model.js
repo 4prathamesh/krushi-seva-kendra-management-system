@@ -2,7 +2,7 @@
  * Supplier — wholesalers / distributors the shop buys stock from.
  * Saved once, reused across purchases. Prevents re-typing details every time.
  */
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const supplierSchema = new mongoose.Schema(
   {
@@ -18,4 +18,4 @@ const supplierSchema = new mongoose.Schema(
 
 supplierSchema.index({ name: 'text' });
 
-module.exports = mongoose.model('Supplier', supplierSchema);
+export default mongoose.model('Supplier', supplierSchema);

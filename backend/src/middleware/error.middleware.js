@@ -1,6 +1,6 @@
 'use strict';
 
-const logger = require('../utils/logger');
+import logger from '../utils/logger.js';
 
 const errorMiddleware = (err, req, res, next) => {
   logger.error(`${err.message} | ${req.method} ${req.originalUrl}`);
@@ -47,4 +47,4 @@ const errorMiddleware = (err, req, res, next) => {
   res.status(statusCode).json(body);
 };
 
-module.exports = errorMiddleware;
+export default errorMiddleware;

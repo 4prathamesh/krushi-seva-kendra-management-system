@@ -1,4 +1,4 @@
-const Invoice = require('../models/invoice.model');
+import Invoice from '../models/invoice.model.js';
 
 /**
  * Generates the next invoice number in INV-YYYY-NNNN format.
@@ -6,7 +6,7 @@ const Invoice = require('../models/invoice.model');
  * Uses a retry loop to handle the rare concurrent-save race condition
  * without needing a separate counter collection.
  */
-const generateInvoiceNumber = async () => {
+export const generateInvoiceNumber = async () => {
   const year = new Date().getFullYear();
   const prefix = `INV-${year}-`;
 
@@ -26,5 +26,3 @@ const generateInvoiceNumber = async () => {
   // Zero-pad to 4 digits (supports up to 9999 invoices/year; extend padding if needed)
   return `${prefix}${String(nextSeq).padStart(4, '0')}`;
 };
-
-module.exports = { generateInvoiceNumber };

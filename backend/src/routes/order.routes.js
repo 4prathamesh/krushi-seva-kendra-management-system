@@ -1,16 +1,16 @@
-const express = require('express');
-const router = express.Router();
-
-const {
+import express from 'express';
+import {
   getAllOrders,
   getOrderById,
   createOrder,
   updateOrderStatus,
   cancelOrder,
   getDashboardStats,
-} = require('../controllers/order.controller');
-const { protect, authorizeRoles } = require('../middleware/auth.middleware');
-const { orderValidation } = require('../validations/order.validation');
+} from '../controllers/order.controller.js';
+import protect, { authorizeRoles } from '../middleware/auth.middleware.js';
+import { orderValidation } from '../validations/order.validation.js';
+
+const router = express.Router();
 
 router.get('/dashboard', protect, getDashboardStats);
 router.get('/', protect, getAllOrders);
@@ -19,4 +19,4 @@ router.post('/', protect, orderValidation, createOrder);
 router.patch('/:id/status', protect, updateOrderStatus);
 router.delete('/:id', protect, authorizeRoles('admin'), cancelOrder);
 
-module.exports = router;
+export default router;

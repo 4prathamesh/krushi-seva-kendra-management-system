@@ -3,8 +3,8 @@
  * All business logic lives in src/services/product.service.js
  */
 
-const productService = require('../services/product.service');
-const { sendSuccess, sendError } = require('../utils/responseHandler');
+import * as productService from '../services/product.service.js';
+import { sendSuccess, sendError } from '../utils/responseHandler.js';
 
 const getAllProducts = async (req, res, next) => {
   try {
@@ -76,7 +76,7 @@ const deleteProduct = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   getAllProducts,
   getProductById,
   getLowStockProducts,

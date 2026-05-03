@@ -1,12 +1,13 @@
 'use strict';
 
-const Purchase  = require('../models/purchase.model');
-const Product   = require('../models/product.model');
-const { findOrCreateSupplier } = require('./supplier.service');
-const { generatePurchaseNumber } = require('../utils/purchaseNumber');
+import Purchase from '../models/purchase.model.js';
+import Product from '../models/product.model.js';
+import { findOrCreateSupplier } from './supplier.service.js';
+import { generatePurchaseNumber } from '../utils/purchaseNumber.js';
+import Supplier from '../models/supplier.model.js';
 
 // ─── Create purchase (stock in) ───────────────────────────────────────────────
-const createPurchase = async ({
+export const createPurchase = async ({
   supplierName,
   supplierPhone = '',
   supplierAddress = '',
@@ -22,7 +23,6 @@ const createPurchase = async ({
   // Find or create supplier record — saves details for future use
   let supplier;
   if (supplierId) {
-    const Supplier = require('../models/supplier.model');
     supplier = await Supplier.findById(supplierId);
     if (!supplier) throw { status: 404, message: 'Supplier not found' };
   } else {
@@ -90,7 +90,7 @@ const createPurchase = async ({
   return purchase;
 };
 
-const getAllPurchases = async ({ page = 1, limit = 20, search, from, to, supplierId } = {}) => {
+export const getAllPurchases = async ({ page = 1, limit = 20, search, from, to, supplierId } = {}) => {
   const filter = {};
 
   if (supplierId) {
@@ -128,7 +128,7 @@ const getAllPurchases = async ({ page = 1, limit = 20, search, from, to, supplie
   };
 };
 
-const getPurchaseById = async (id) => {
+export const getPurchaseById = async (id) => {
   const purchase = await Purchase.findById(id)
     .populate('createdBy', 'name')
     .populate('supplier', 'name phone address')
@@ -136,5 +136,3 @@ const getPurchaseById = async (id) => {
   if (!purchase) throw { status: 404, message: 'Purchase not found' };
   return purchase;
 };
-
-module.exports = { createPurchase, getAllPurchases, getPurchaseById };

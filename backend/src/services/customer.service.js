@@ -2,7 +2,7 @@
  * Customer Service — business logic for farmer/customer CRUD.
  */
 
-const Customer = require('../models/customer.model');
+import Customer from '../models/customer.model.js';
 
 const escapeRegex = (text) => {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -34,7 +34,7 @@ const buildFilter = ({ search, village, hasUdhar } = {}) => {
   return filter;
 };
 
-const getAllCustomers = async ({ search, village, hasUdhar, page = 1, limit = 10 } = {}) => {
+export const getAllCustomers = async ({ search, village, hasUdhar, page = 1, limit = 10 } = {}) => {
   const filter = buildFilter({ search, village, hasUdhar });
   const skip   = (Number(page) - 1) * Number(limit);
 
@@ -55,7 +55,7 @@ const getAllCustomers = async ({ search, village, hasUdhar, page = 1, limit = 10
 };
 
 // Used to populate the village filter dropdown on the frontend
-const getDistinctVillages = async () => {
+export const getDistinctVillages = async () => {
   const villages = await Customer.distinct('village', {
     isActive: true,
     village: { $ne: '', $exists: true, $ne: null },
@@ -63,25 +63,25 @@ const getDistinctVillages = async () => {
   return villages.filter(Boolean).sort();
 };
 
-const getCustomerById = async (id) => {
+export const getCustomerById = async (id) => {
   const customer = await Customer.findById(id);
   if (!customer) throw { status: 404, message: 'Customer not found' };
   return customer;
 };
 
-const getCustomerInvoices = async (customerId) => {
+export const getCustomerInvoices = async (customerId) => {
   // Use Invoice model to get purchase history for a customer
-  const Invoice = require('../models/invoice.model');
+  const Invoice = (await import('../models/invoice.model.js')).default;
   return Invoice.find({ customer: customerId, isCancelled: false })
     .sort({ createdAt: -1 })
     .lean();
 };
 
-const createCustomer = async (data) => {
+export const createCustomer = async (data) => {
   return Customer.create(data);
 };
 
-const updateCustomer = async (id, data) => {
+export const updateCustomer = async (id, data) => {
   const customer = await Customer.findByIdAndUpdate(id, data, {
     new: true,
     runValidators: true,
@@ -90,7 +90,7 @@ const updateCustomer = async (id, data) => {
   return customer;
 };
 
-const deleteCustomer = async (id) => {
+export const deleteCustomer = async (id) => {
   const customer = await Customer.findByIdAndUpdate(
     id,
     { isActive: false },
@@ -98,14 +98,4 @@ const deleteCustomer = async (id) => {
   );
   if (!customer) throw { status: 404, message: 'Customer not found' };
   return customer;
-};
-
-module.exports = {
-  getAllCustomers,
-  getDistinctVillages,
-  getCustomerById,
-  getCustomerInvoices,
-  createCustomer,
-  updateCustomer,
-  deleteCustomer,
 };

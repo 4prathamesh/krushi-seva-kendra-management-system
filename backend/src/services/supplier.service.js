@@ -1,8 +1,8 @@
 'use strict';
 
-const Supplier = require('../models/supplier.model');
+import Supplier from '../models/supplier.model.js';
 
-const getAllSuppliers = async ({ search } = {}) => {
+export const getAllSuppliers = async ({ search } = {}) => {
   const filter = { isActive: true };
   if (search && search.trim()) {
     const e = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -11,7 +11,7 @@ const getAllSuppliers = async ({ search } = {}) => {
   return Supplier.find(filter).sort({ name: 1 }).lean();
 };
 
-const findOrCreateSupplier = async ({ name, phone = '', address = '', gstin = '' }) => {
+export const findOrCreateSupplier = async ({ name, phone = '', address = '', gstin = '' }) => {
   // Try to find by name (case-insensitive)
   let supplier = await Supplier.findOne({
     name: { $regex: `^${name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
@@ -22,14 +22,12 @@ const findOrCreateSupplier = async ({ name, phone = '', address = '', gstin = ''
   return supplier;
 };
 
-const createSupplier = async (data) => {
+export const createSupplier = async (data) => {
   return Supplier.create(data);
 };
 
-const updateSupplier = async (id, data) => {
+export const updateSupplier = async (id, data) => {
   const supplier = await Supplier.findByIdAndUpdate(id, data, { new: true, runValidators: true });
   if (!supplier) throw { status: 404, message: 'Supplier not found' };
   return supplier;
 };
-
-module.exports = { getAllSuppliers, findOrCreateSupplier, createSupplier, updateSupplier };

@@ -1,5 +1,5 @@
-const { body, query, validationResult } = require('express-validator');
-const { sendError } = require('../utils/responseHandler');
+import { body, query, validationResult } from 'express-validator';
+import { sendError } from '../utils/responseHandler.js';
 
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
@@ -7,7 +7,7 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-const createInvoiceValidation = [
+export const createInvoiceValidation = [
   body('customerName').trim().notEmpty().withMessage('Customer name is required'),
   body('mobile')
     .trim()
@@ -34,5 +34,3 @@ const createInvoiceValidation = [
     .withMessage('Opening balance must be non-negative'),
   handleValidationErrors,
 ];
-
-module.exports = { createInvoiceValidation };

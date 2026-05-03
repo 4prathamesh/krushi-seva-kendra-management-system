@@ -3,8 +3,8 @@
  * All business logic lives in src/services/customer.service.js
  */
 
-const customerService = require('../services/customer.service');
-const { sendSuccess, sendError } = require('../utils/responseHandler');
+import * as customerService from '../services/customer.service.js';
+import { sendSuccess, sendError } from '../utils/responseHandler.js';
 
 const getAllCustomers = async (req, res, next) => {
   try {
@@ -75,7 +75,7 @@ const deleteCustomer = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   getAllCustomers,
   getDistinctVillages,
   getCustomerById,

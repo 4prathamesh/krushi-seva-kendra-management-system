@@ -1,14 +1,13 @@
 'use strict';
 
-const Invoice           = require('../models/invoice.model');
-const Product           = require('../models/product.model');
-const Customer          = require('../models/customer.model');
-const CreditTransaction = require('../models/credit.model');
-const { calcLineGST, calcOrderTotals } = require('../utils/gst');
-const { generateInvoiceNumber }        = require('../utils/invoiceNumber');
-const { amountInWords }                = require('../utils/amountInWords');
-
-const mongoose = require('mongoose');
+import Invoice from '../models/invoice.model.js';
+import Product from '../models/product.model.js';
+import Customer from '../models/customer.model.js';
+import CreditTransaction from '../models/credit.model.js';
+import { calcLineGST, calcOrderTotals } from '../utils/gst.js';
+import { generateInvoiceNumber } from '../utils/invoiceNumber.js';
+import { amountInWords } from '../utils/amountInWords.js';
+import mongoose from 'mongoose';
 
 // ─── 1. SMART CUSTOMER LOOKUP / AUTO-CREATE ──────────────────────────────────
 /**
@@ -18,7 +17,7 @@ const mongoose = require('mongoose');
  * Returns the Customer document (existing or freshly created).
  * Never creates a duplicate phone entry.
  */
-const findOrCreateCustomer = async ({ mobile, customerName, village = '', taluka = '', district = '' }) => {
+export const findOrCreateCustomer = async ({ mobile, customerName, village = '', taluka = '', district = '' }) => {
   // Always search by mobile first (unique field)
   let customer = await Customer.findOne({ phone: mobile.trim() });
 
@@ -208,7 +207,7 @@ const applyPayment = async ({ customerId, amount, note, userId }) => {
 };
 
 // ─── 6. CREATE INVOICE ────────────────────────────────────────────────────────
-const createInvoice = async ({
+export const createInvoice = async ({
   customerName,
   mobile,
   village  = '',
@@ -296,18 +295,18 @@ const createInvoice = async ({
 };
 
 // ─── 7. LOOKUP CUSTOMER BY MOBILE (for frontend auto-fill) ───────────────────
-const lookupCustomerByMobile = async (mobile) => {
+export const lookupCustomerByMobile = async (mobile) => {
   const customer = await Customer.findOne({ phone: mobile.trim() }).lean();
   return customer || null;
 };
 
 // ─── 8. RECORD A CREDIT PAYMENT ──────────────────────────────────────────────
-const recordCreditPayment = async ({ customerId, amount, note, userId }) => {
+export const recordCreditPayment = async ({ customerId, amount, note, userId }) => {
   return applyPayment({ customerId, amount: Number(amount), note, userId });
 };
 
 // ─── 9. GET CREDIT LEDGER FOR A CUSTOMER ─────────────────────────────────────
-const getCreditLedger = async (customerId) => {
+export const getCreditLedger = async (customerId) => {
   const [customer, transactions] = await Promise.all([
     Customer.findById(customerId).lean(),
     CreditTransaction.find({ customer: customerId })
@@ -342,7 +341,7 @@ const buildFilter = ({ search, mobile, paymentMode, paymentStatus, status, from,
   return filter;
 };
 
-const getAllInvoices = async ({ page = 1, limit = 20, ...filters } = {}) => {
+export const getAllInvoices = async ({ page = 1, limit = 20, ...filters } = {}) => {
   const filter = buildFilter(filters);
   const skip   = (Number(page) - 1) * Number(limit);
   const [invoices, total] = await Promise.all([
@@ -356,14 +355,14 @@ const getAllInvoices = async ({ page = 1, limit = 20, ...filters } = {}) => {
   };
 };
 
-const getInvoiceById = async (id) => {
+export const getInvoiceById = async (id) => {
   const invoice = await Invoice.findById(id).populate('createdBy', 'name').populate('customer', 'name phone village creditBalance').lean();
   if (!invoice) throw { status: 404, message: 'Invoice not found' };
   invoice.amountInWords = amountInWords(invoice.grandTotal);
   return invoice;
 };
 
-const cancelInvoice = async (id, reason = 'Cancelled by admin') => {
+export const cancelInvoice = async (id, reason = 'Cancelled by admin') => {
   const invoice = await Invoice.findById(id);
   if (!invoice)            throw { status: 404, message: 'Invoice not found' };
   if (invoice.isCancelled) throw { status: 400, message: 'Invoice already cancelled' };
@@ -393,7 +392,7 @@ const cancelInvoice = async (id, reason = 'Cancelled by admin') => {
   return { invoiceNumber: invoice.invoiceNumber };
 };
 
-const getGSTReport = async ({ from, to } = {}) => {
+export const getGSTReport = async ({ from, to } = {}) => {
   const filter = buildFilter({ from, to });
   const [summary] = await Invoice.aggregate([
     { $match: filter },
@@ -412,7 +411,7 @@ const getGSTReport = async ({ from, to } = {}) => {
   return summary || { totalInvoices:0, subTotal:0, cgstTotal:0, sgstTotal:0, totalGST:0, grandTotal:0, totalPaid:0, totalDue:0 };
 };
 
-const getDashboardStats = async () => {
+export const getDashboardStats = async () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [totalInvoices, todayInvoices, revenueResult, totalCustomers, lowStockCount, totalDue] = await Promise.all([
@@ -432,16 +431,4 @@ const getDashboardStats = async () => {
     lowStockCount,
     totalOutstanding: totalDue[0]?.total || 0,
   };
-};
-
-module.exports = {
-  createInvoice,
-  lookupCustomerByMobile,
-  recordCreditPayment,
-  getCreditLedger,
-  getAllInvoices,
-  getInvoiceById,
-  cancelInvoice,
-  getGSTReport,
-  getDashboardStats,
 };
