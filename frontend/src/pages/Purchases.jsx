@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import QuickAddProduct from '../components/common/QuickAddProduct';
-import purchaseService from '../services/purchase.service';
+import { useCreatePurchase, usePurchases } from '../hooks/usePurchases';
+import { useProducts } from '../hooks/useProducts';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import Modal from '../components/ui/Modal';
 import Select from '../components/common/Select';
-import api from '../services/api';
 import toast from 'react-hot-toast';
 
 const emptyItem = () => ({ productId: '', quantity: '1', price: '' });
@@ -99,24 +99,24 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
   const [form, setForm] = useState({
     paymentMode: 'cash', paidAmount: '', purchaseDate: '', notes: '',
   });
+  
+      // Products come from React Query cache — no useEffect needed
+  const { data: productData, refetch: refetchProducts } = useProducts({ limit: 500 });
+
   const [items, setItems]         = useState([emptyItem()]);
-  const [products, setProducts]   = useState([]);
+  const products = (productData?.products || []).filter((p) => p.isActive);
   const [errors, setErrors]       = useState({});
-  const [submitting, setSubmitting] = useState(false);
+  const createPurchaseMutation = useCreatePurchase();
   const [quickAdd, setQuickAdd]       = useState({ open: false, rowIndex: null, name: '' });
 
+  // Reset form when modal opens
   useEffect(() => {
     if (!isOpen) return;
-    let cancelled = false;
-    api.get('/products', { params: { limit: 500 } })
-      .then((r) => { if (!cancelled) setProducts(r.data.data.products.filter((p) => p.isActive)); })
-      .catch(() => {});
-
     setSupplier({ _id: null, name: '', phone: '', address: '' });
     setForm({ paymentMode:'cash', paidAmount:'', purchaseDate:'', notes:'' });
     setItems([emptyItem()]);
     setErrors({});
-    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const handleField = (field, value) => setForm((p) => ({ ...p, [field]: value }));
@@ -135,7 +135,6 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
     const filled = items.filter((i) => i.productId);
     if (filled.length === 0) { toast.error('Add at least one product'); return; }
 
-    setSubmitting(true);
     try {
       const payload = {
         supplierName:    supplier.name,
@@ -151,14 +150,12 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
           return { productId: i.productId, quantity: Number(i.quantity), price: Number(i.price) || prod?.pricePerUnit || 0 };
         }),
       };
-      const result = await purchaseService.create(payload);
+      const result = await createPurchaseMutation.mutateAsync(payload);
       toast.success(`Purchase ${result.purchase.purchaseNumber} recorded — stock updated`);
       onCreated();
       onClose();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to record purchase');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -289,8 +286,8 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
         </div>
 
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>Cancel</Button>
-          <Button type="submit" loading={submitting}>📥 Record Purchase &amp; Update Stock</Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={createPurchaseMutation.isPending}>Cancel</Button>
+          <Button type="submit" loading={createPurchaseMutation.isPending}>📥 Record Purchase &amp; Update Stock</Button>
         </div>
       </form>
 
@@ -300,8 +297,8 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
         onClose={() => setQuickAdd({ open: false, rowIndex: null, name: '' })}
         initialName={quickAdd.name}
         onCreated={(newProduct) => {
-          // Add new product to local list so it appears in dropdown immediately
-          setProducts((prev) => [...prev, newProduct]);
+          // Refetch product list so the newly created product appears in dropdown
+          refetchProducts().catch(() => {});
           // Auto-select it in the row that triggered the quick-add
           if (quickAdd.rowIndex !== null) {
             handleItem(quickAdd.rowIndex, 'productId', newProduct._id);
@@ -316,28 +313,14 @@ const PurchaseForm = ({ isOpen, onClose, onCreated }) => {
 
 // ── Purchases Page ────────────────────────────────────────────────────────────
 const Purchases = () => {
-  const [purchases, setPurchases] = useState([]);
-  const [pagination, setPagination] = useState({});
-  const [loading, setLoading]     = useState(false);
-  const [page, setPage]           = useState(1);
-  const [search, setSearch]       = useState('');
-  const [formOpen, setFormOpen]   = useState(false);
+  const [page, setPage]         = useState(1);
+  const [search, setSearch]     = useState('');
+  const [formOpen, setFormOpen] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await purchaseService.getAll({ page, limit: 20, search: search || undefined });
-      setPurchases(data.purchases);
-      setPagination(data.pagination);
-    } catch { toast.error('Failed to load purchases'); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => {
-    const controller = new AbortController();
-    load();
-    return () => controller.abort();
-  }, [page, search]);
+  const { data, isLoading, isError, refetch } = usePurchases({ page, limit: 20, search: search || undefined });
+  const purchases = data?.purchases || [];
+  const pagination = data?.pagination || {};
+  const loading = isLoading;
 
   return (
     <>
@@ -401,7 +384,7 @@ const Purchases = () => {
         </div>
       </div>
 
-      <PurchaseForm isOpen={formOpen} onClose={() => setFormOpen(false)} onCreated={load} />
+      <PurchaseForm isOpen={formOpen} onClose={() => setFormOpen(false)} onCreated={refetch} />
     </>
   );
 };

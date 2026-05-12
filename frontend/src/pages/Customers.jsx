@@ -1,11 +1,9 @@
-import { useEffect, useState, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchCustomers, deleteCustomer } from '../features/customers/customerSlice';
+import { useState } from 'react';
+import { useCustomers, useVillages, useDeleteCustomer } from '../hooks/useCustomers';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import CustomerForm from '../components/common/CustomerForm';
 import CustomerOrderHistory from '../components/common/CustomerOrderHistory';
-import api from '../services/api';
 import toast from 'react-hot-toast';
 
 // ─── Filter pill component ─────────────────────────────────────────────────
@@ -23,8 +21,6 @@ const FilterPill = ({ label, active, onClick }) => (
 );
 
 const Customers = () => {
-  const dispatch = useDispatch();
-  const { items: customers, loading, pagination } = useSelector((s) => s.customers);
 
   // ── Filters ──
   const [search, setSearch]         = useState('');
@@ -32,33 +28,25 @@ const Customers = () => {
   const [udharFilter, setUdhar]     = useState(false);  // true = only customers with Udhar
   const [page, setPage]             = useState(1);
 
-  // ── Village dropdown data ──
-  const [villages, setVillages]     = useState([]);
-
   // ── Modals ──
   const [formOpen, setFormOpen]         = useState(false);
   const [editingCustomer, setEditing]   = useState(null);
   const [historyCustomer, setHistoryCust] = useState(null);
 
-  // Load distinct villages for the filter dropdown once on mount
-  useEffect(() => {
-    api.get('/customers/villages')
-      .then((r) => setVillages(r.data.data.villages || []))
-      .catch(() => {});
-  }, []);
+  // ── React Query: data + loading come from the hook ───────────────────────
+  const { data, isLoading } = useCustomers({
+    search:   search   || undefined,
+    village:  villageFilter || undefined,
+    hasUdhar: udharFilter  || undefined,
+    page,
+    limit: 10,
+  });
+  const customers  = data?.customers  || [];
+  const pagination = data?.pagination || {};
 
-  // Fetch customers whenever filters change
-  useEffect(() => {
-    const controller = new AbortController();
-    dispatch(fetchCustomers({
-      search:   search   || undefined,
-      village:  villageFilter || undefined,
-      hasUdhar: udharFilter  || undefined,
-      page,
-      limit: 10,
-    }));
-    return () => controller.abort();
-  }, [dispatch, search, villageFilter, udharFilter, page]);
+  const { data: villages = [] } = useVillages();
+
+  const deleteMutation = useDeleteCustomer();
 
   const openAdd      = () => { setEditing(null); setFormOpen(true); };
   const openEdit     = (c) => { setEditing(c);   setFormOpen(true); };
@@ -66,18 +54,15 @@ const Customers = () => {
   const openHistory  = (c) => setHistoryCust(c);
   const closeHistory = () => setHistoryCust(null);
 
-  const handleSaved = () => dispatch(fetchCustomers({
-    search: search || undefined, village: villageFilter || undefined,
-    hasUdhar: udharFilter || undefined, page, limit: 10,
-  }));
+  const handleSaved = () => {};
 
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
     try {
-      await dispatch(deleteCustomer(id)).unwrap();
+      await deleteMutation.mutateAsync(id);
       toast.success('Customer deleted');
     } catch (err) {
-      toast.error(err || 'Failed to delete customer');
+      toast.error(err?.response?.data?.message || 'Failed to delete customer');
     }
   };
 
@@ -164,7 +149,7 @@ const Customers = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {loading ? (
+            {isLoading ? (
               <tr><td colSpan={7} className="text-center py-10 text-gray-400">Loading...</td></tr>
             ) : customers.length === 0 ? (
               <tr>

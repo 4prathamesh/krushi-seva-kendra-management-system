@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { fetchInvoices, cancelInvoice } from '../features/invoices/invoiceSlice';
+import { useInvoices, useCancelInvoice, useInvoice } from '../hooks/useInvoices';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import InvoicePrint from '../components/common/InvoicePrint';
-import invoiceService from '../services/invoice.service';
 import toast from 'react-hot-toast';
 
 // Payment mode badges
@@ -35,9 +34,7 @@ const STATUS_LABEL = {
 };
 
 const Invoices = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { items: invoices, loading, pagination } = useSelector((s) => s.invoices);
   const { user } = useSelector((s) => s.auth);
 
   const [page, setPage]                   = useState(1);
@@ -47,44 +44,38 @@ const Invoices = () => {
   const [fromDate, setFrom]               = useState('');
   const [toDate, setTo]                   = useState('');
 
-  const [printInvoice, setPrintInv]       = useState(null);
-  const [loadingPrint, setLoadPrint]      = useState(false);
+  // For reprint — store the invoice id to fetch, null = no print
+  const [printId, setPrintId]           = useState(null);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    dispatch(fetchInvoices({
-      page,
-      limit:         20,
-      search:        search         || undefined,
-      paymentMode:   payModeFilter  || undefined,
-      paymentStatus: payStatusFilter|| undefined,
-      from:          fromDate       || undefined,
-      to:            toDate         || undefined,
-    }));
-    return () => controller.abort();
-  }, [dispatch, page, search, payModeFilter, payStatusFilter, fromDate, toDate]);
+  // ── React Query ────────────────────────────────────────────────────────────
+  const { data, isLoading } = useInvoices({
+    page, limit: 20,
+    search:        search          || undefined,
+    paymentMode:   payModeFilter   || undefined,
+    paymentStatus: payStatusFilter || undefined,
+    from:          fromDate        || undefined,
+    to:            toDate          || undefined,
+  });
+  const invoices  = data?.invoices  || [];
+  const pagination = data?.pagination || {};
 
-  const handleReprint = async (id) => {
-    setLoadPrint(true);
-    try {
-      const data = await invoiceService.getById(id);
-      setPrintInv(data.invoice);
-    } catch { toast.error('Failed to load invoice'); }
-    finally   { setLoadPrint(false); }
-  };
+  // Fetch single invoice for reprint (cached after first load)
+  const { data: printData, isLoading: loadingPrint } = useInvoice(printId);
+  const printInvoice = printData?.invoice || null;
+
+  const cancelMutation = useCancelInvoice();
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+  const handleReprint = (id) => setPrintId(id);
 
   const handleCancel = async (id, invoiceNumber) => {
     if (!window.confirm(`Cancel invoice ${invoiceNumber}? Stock will be restored and any credit will be reversed.`)) return;
     try {
-      await dispatch(cancelInvoice({ id, reason: 'Cancelled by admin' })).unwrap();
+      await cancelMutation.mutateAsync({ id, reason: 'Cancelled by admin' });
       toast.success(`Invoice ${invoiceNumber} cancelled`);
-      dispatch(fetchInvoices({
-        page, limit: 20,
-        search: search || undefined, paymentMode: payModeFilter || undefined,
-        paymentStatus: payStatusFilter || undefined,
-        from: fromDate || undefined, to: toDate || undefined,
-      }));
-    } catch (err) { toast.error(err || 'Failed to cancel invoice'); }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to cancel invoice');
+    }
   };
 
   const resetFilters = () => {
@@ -164,7 +155,7 @@ const Invoices = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {loading ? (
+              {isLoading ? (
                 <tr><td colSpan={11} className="text-center py-10 text-gray-400">Loading…</td></tr>
               ) : invoices.length === 0 ? (
                 <tr><td colSpan={11} className="text-center py-10 text-gray-400">No invoices found</td></tr>
@@ -211,7 +202,7 @@ const Invoices = () => {
                       <div className="flex gap-1.5">
                         <Button variant="outline" className="py-1 px-2 text-xs"
                           onClick={() => handleReprint(inv._id)}
-                          loading={loadingPrint} disabled={inv.isCancelled}>
+                          loading={loadingPrint} disabled={inv.isCancelled || loadingPrint}>
                           🖨️
                         </Button>
                         {user?.role === 'admin' && !inv.isCancelled && (

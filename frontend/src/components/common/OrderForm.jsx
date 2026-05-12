@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
-import { createOrder } from '../../features/orders/orderSlice';
+import { useCreateOrder } from '../../hooks/useOrders';
 import Modal from '../ui/Modal';
 import Input from './Input';
 import Select from './Select';
@@ -109,7 +108,7 @@ const OrderItemRow = ({ item, index, products, onChange, onRemove, errors = {} }
  *   order    {object | null}  — null = Add, object = Edit (status/payment only)
  */
 const OrderForm = ({ isOpen, onClose, order = null }) => {
-  const dispatch = useDispatch();
+  const createOrderMutation = useCreateOrder();
   const isEdit = Boolean(order);
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -238,7 +237,7 @@ const OrderForm = ({ isOpen, onClose, order = null }) => {
           discountAmount: Number(form.discountAmount || 0),
           notes: form.notes,
         };
-        const result = await dispatch(createOrder(payload)).unwrap();
+        const result = await createOrderMutation.mutateAsync(payload);
         toast.success(`Order ${result.order.orderNumber} created`);
       }
       onClose();

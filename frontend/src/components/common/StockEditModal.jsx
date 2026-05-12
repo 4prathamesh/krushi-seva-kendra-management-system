@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { updateProduct } from '../../features/products/productSlice';
-import productService from '../../services/product.service';
+import { useUpdateStock } from '../../hooks/useProducts';
 import Modal from '../ui/Modal';
 import Input from './Input';
 import Button from './Button';
@@ -20,11 +18,10 @@ import toast from 'react-hot-toast';
  *   product  {object}  — the product whose stock to adjust
  */
 const StockEditModal = ({ isOpen, onClose, product }) => {
-  const dispatch = useDispatch();
+  const updateStockMutation = useUpdateStock();
 
   const [newStock, setNewStock]     = useState('');
   const [error, setError]           = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen && product) {
@@ -35,24 +32,20 @@ const StockEditModal = ({ isOpen, onClose, product }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const val = Number(newStock);
+
     if (newStock === '' || isNaN(val) || val < 0) {
       setError('Enter a valid stock quantity (≥ 0)');
       return;
     }
 
-    setSubmitting(true);
     try {
-      // PATCH /products/:id/stock
-      const result = await productService.updateStock(product._id, val);
-      // Sync updated product into Redux store
-      dispatch(updateProduct.fulfilled(result, '', { id: product._id, data: {} }));
+      await updateStockMutation.mutateAsync({ id: product._id, stock: val });
       toast.success(`Stock updated to ${val} ${product.unit}`);
       onClose();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update stock');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -66,8 +59,7 @@ const StockEditModal = ({ isOpen, onClose, product }) => {
       <div className="bg-gray-50 rounded-lg p-3 mb-4 text-sm space-y-1">
         <p className="font-semibold text-gray-800">{product.name}</p>
         <p className="text-gray-500">
-          Current stock:{' '}
-          <span className="font-medium text-gray-700">{product.stock} {product.unit}</span>
+          Current stock: <span className="font-medium text-gray-700">{product.stock} {product.unit}</span>
         </p>
         <p className="text-gray-500">
           Low stock alert at:{' '}
@@ -99,12 +91,8 @@ const StockEditModal = ({ isOpen, onClose, product }) => {
         )}
 
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={submitting}>
-            Update Stock
-          </Button>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={updateStockMutation.isPending}>Cancel</Button>
+          <Button type="submit" loading={updateStockMutation.isPending}>Update Stock</Button>
         </div>
       </form>
     </Modal>

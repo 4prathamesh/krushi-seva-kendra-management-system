@@ -1,35 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, clearError } from '../features/auth/authSlice';
+import { useLogin } from '../hooks/useAuth';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import toast from 'react-hot-toast';
 
 const Login = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, error, token } = useSelector((state) => state.auth);
+  const loginMutation = useLogin();
 
   const [form, setForm] = useState({ email: '', password: '' });
-
-  useEffect(() => {
-    if (token) navigate('/');
-  }, [token, navigate]);
-
-  useEffect(() => {
-    if (error) {
-      toast.error(error);
-      dispatch(clearError());
-    }
-  }, [error, dispatch]);
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    dispatch(login(form));
+    try {
+      await loginMutation.mutateAsync(form);
+      navigate('/');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Login failed');
+    }
   };
 
   return (
@@ -60,8 +52,8 @@ const Login = () => {
             placeholder="••••••••"
             required
           />
-          <Button type="submit" loading={loading} className="w-full mt-2">
-            Sign In
+          <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+            {loginMutation.isPending ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
       </div>

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchProducts, deleteProduct } from '../features/products/productSlice';
+import { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { useProducts, useDeleteProduct } from '../hooks/useProducts';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import ProductForm from '../components/common/ProductForm';
@@ -17,8 +17,6 @@ const STOCK_BADGES = {
 const BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:5000';
 
 const Products = () => {
-  const dispatch = useDispatch();
-  const { items: products, loading, pagination } = useSelector((s) => s.products);
   const { user } = useSelector((s) => s.auth);
 
   const [search, setSearch]     = useState('');
@@ -34,9 +32,12 @@ const Products = () => {
   const [stockOpen, setStockOpen]   = useState(false);
   const [stockProduct, setStockProd] = useState(null);
 
-  useEffect(() => {
-    dispatch(fetchProducts({ search, category, stockStatus: stockFilter, page, limit: 10 }));
-  }, [dispatch, search, category, stockFilter, page]);
+  // ── React Query ───────────────────────────────────────────────────────────
+  const { data, isLoading } = useProducts({ search, category, stockStatus: stockFilter, page, limit: 10 });
+  const products  = data?.products  || [];
+  const pagination = data?.pagination || {};
+
+  const deleteMutation = useDeleteProduct();
 
   const openAdd       = () => { setEditing(null); setFormOpen(true); };
   const openEdit      = (p) => { setEditing(p);   setFormOpen(true); };
@@ -47,10 +48,10 @@ const Products = () => {
   const handleDelete = async (id, name) => {
     if (!window.confirm(`Delete "${name}"?`)) return;
     try {
-      await dispatch(deleteProduct(id)).unwrap();
+      await deleteMutation.mutateAsync(id);
       toast.success('Product deleted');
     } catch (err) {
-      toast.error(err || 'Failed to delete product');
+      toast.error(err?.response?.data?.message || 'Failed to delete product');
     }
   };
 
@@ -112,7 +113,7 @@ const Products = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {loading ? (
+            {isLoading ? (
               <tr><td colSpan={8} className="text-center py-10 text-gray-400">Loading...</td></tr>
             ) : products.length === 0 ? (
               <tr><td colSpan={8} className="text-center py-10 text-gray-400">No products found</td></tr>

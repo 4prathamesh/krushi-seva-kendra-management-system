@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { createCustomer, updateCustomer } from '../../features/customers/customerSlice';
+import { useCreateCustomer, useUpdateCustomer } from '../../hooks/useCustomers';
 import Modal from '../ui/Modal';
 import Input from './Input';
 import Textarea from './Textarea';
@@ -52,7 +51,8 @@ const validate = (form, selectedCrops) => {
  *   onSaved     {(customer) => void}  — called after successful save
  */
 const CustomerForm = ({ isOpen, onClose, customer = null, onSaved }) => {
-  const dispatch = useDispatch();
+  const createCustomerMutation = useCreateCustomer();
+  const updateCustomerMutation = useUpdateCustomer();
   const isEdit = Boolean(customer);
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -112,11 +112,11 @@ const CustomerForm = ({ isOpen, onClose, customer = null, onSaved }) => {
 
       let saved;
       if (isEdit) {
-        const result = await dispatch(updateCustomer({ id: customer._id, data: payload })).unwrap();
+        const result = await updateCustomerMutation.mutateAsync({ id: customer._id, data: payload });
         saved = result.customer;
         toast.success(`"${saved.name}" updated`);
       } else {
-        const result = await dispatch(createCustomer(payload)).unwrap();
+        const result = await createCustomerMutation.mutateAsync(payload);
         saved = result.customer;
         toast.success(`"${saved.name}" added`);
       }

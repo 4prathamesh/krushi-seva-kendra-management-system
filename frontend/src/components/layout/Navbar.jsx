@@ -1,14 +1,14 @@
-import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../../features/auth/authSlice';
+import { useSelector } from 'react-redux';
+import { useLogout } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
-  const dispatch = useDispatch();
+  const logout = useLogout();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
   const handleLogout = () => {
-    dispatch(logout());
+    logout();
     navigate('/login');
   };
 

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { updateOrderStatus } from '../../features/orders/orderSlice';
+import { useUpdateOrderStatus } from '../../hooks/useOrders';
 import Modal from '../ui/Modal';
 import Select from './Select';
 import Textarea from './Textarea';
@@ -42,7 +41,7 @@ const validate = (form) => {
  *   order   {object}   — the order being edited (required)
  */
 const OrderStatusForm = ({ isOpen, onClose, order }) => {
-  const dispatch = useDispatch();
+  const updateStatusMutation = useUpdateOrderStatus();
 
   const [form, setForm]         = useState({ orderStatus: '', paymentStatus: '', notes: '' });
   const [errors, setErrors]     = useState({});
@@ -72,9 +71,7 @@ const OrderStatusForm = ({ isOpen, onClose, order }) => {
 
     setSubmitting(true);
     try {
-      await dispatch(
-        updateOrderStatus({ id: order._id, data: form })
-      ).unwrap();
+      await updateStatusMutation.mutateAsync({ id: order._id, data: form });
       toast.success(`Order ${order.orderNumber} updated`);
       onClose();
     } catch (err) {

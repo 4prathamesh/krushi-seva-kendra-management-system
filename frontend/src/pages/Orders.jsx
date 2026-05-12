@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchOrders, updateOrderStatus, cancelOrder } from '../features/orders/orderSlice';
+import { useState } from 'react';
+import { useSelector } from 'react-redux';
+import { useOrders, useUpdateOrderStatus, useCancelOrder } from '../hooks/useOrders';
 import Button from '../components/common/Button';
 import OrderForm from '../components/common/OrderForm';
 import OrderStatusForm from '../components/common/OrderStatusForm';
@@ -40,8 +40,6 @@ const FilterPills = ({ value, onChange, options }) => (
 );
 
 const Orders = () => {
-  const dispatch = useDispatch();
-  const { items: orders, loading, pagination } = useSelector((s) => s.orders);
   const { user } = useSelector((s) => s.auth);
 
   const [page, setPage]                   = useState(1);
@@ -54,15 +52,18 @@ const Orders = () => {
   const [editingOrder, setEditing]  = useState(null);
   const [detailId, setDetailId]     = useState(null);
 
-  useEffect(() => {
-    dispatch(fetchOrders({
-      page,
-      limit: 10,
-      orderStatus:   statusFilter  || undefined,
-      paymentStatus: payFilter     || undefined,
-      orderType:     typeFilter    || undefined,
-    }));
-  }, [dispatch, page, statusFilter, payFilter, typeFilter]);
+  // ── React Query ────────────────────────────────────────────────────────────
+  const { data, isLoading: loading } = useOrders({
+    page, limit: 10,
+    orderStatus:   statusFilter || undefined,
+    paymentStatus: payFilter    || undefined,
+    orderType:     typeFilter   || undefined,
+  });
+  const orders     = data?.orders     || [];
+  const pagination = data?.pagination || {};
+
+  const updateStatusMutation = useUpdateOrderStatus();
+  const cancelMutation       = useCancelOrder();
 
   const openAdd   = () => { setEditing(null); setFormOpen(true); };
   const openEdit  = (o) => { setEditing(o);   setFormOpen(true); };
@@ -70,20 +71,20 @@ const Orders = () => {
 
   const markPaid = async (id) => {
     try {
-      await dispatch(updateOrderStatus({ id, data: { paymentStatus: 'paid' } })).unwrap();
+      await updateStatusMutation.mutateAsync({ id, data: { paymentStatus: 'paid' } });
       toast.success('Marked as paid');
     } catch (err) {
-      toast.error(err || 'Failed to update order');
+      toast.error(err?.response?.data?.message  || 'Failed to update order');
     }
   };
 
   const handleCancel = async (id, orderNumber) => {
     if (!window.confirm(`Cancel order ${orderNumber}? Stock will be restored.`)) return;
     try {
-      await dispatch(cancelOrder(id)).unwrap();
+      await cancelMutation.mutateAsync(id);
       toast.success(`Order ${orderNumber} cancelled — stock restored`);
     } catch (err) {
-      toast.error(err || 'Failed to cancel order');
+      toast.error(err?.response?.data?.message  || 'Failed to cancel order');
     }
   };
 

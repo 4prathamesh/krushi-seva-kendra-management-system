@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import QuickAddProduct from '../components/common/QuickAddProduct';
-import { useDispatch } from 'react-redux';
-import { createInvoice } from '../features/invoices/invoiceSlice';
+import { useCreateInvoice } from '../hooks/useInvoices';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import InvoicePrint from '../components/common/InvoicePrint';
@@ -144,7 +143,7 @@ const ItemRow = ({ item, index, products, onChange, onRemove, onOpenQuickAdd, er
 
 // ─── Main Billing Page ────────────────────────────────────────────────────────
 const Billing = () => {
-  const dispatch = useDispatch();
+  const createInvoiceMutation = useCreateInvoice();
 
   const [form, setForm] = useState({
     customerName: '', mobile: '', village: '', taluka: '', district: '',
@@ -265,7 +264,7 @@ const Billing = () => {
 
     setSubmitting(true);
     try {
-      const result = await dispatch(createInvoice({
+      const result = await createInvoiceMutation.mutateAsync({
         customerName:   form.customerName.trim(),
         mobile:         form.mobile.trim(),
         village:        form.village.trim(),
@@ -278,7 +277,7 @@ const Billing = () => {
           price: Number(item.price), gstRate: Number(item.gstRate),
           hsn: item.hsn, batch: item.batch, expiry: item.expiry,
         })),
-      })).unwrap();
+      });
 
       const inv = result.invoice;
       toast.success(`Invoice ${inv.invoiceNumber} created!`);
@@ -497,7 +496,7 @@ const Billing = () => {
                 <li>Stock reduces immediately on save</li>
               </ul>
               <div className="flex gap-3 mt-4">
-                <Button type="button" variant="secondary" onClick={resetForm} disabled={submitting} className="flex-1">
+                <Button type="button" variant="secondary" onClick={resetForm} disabled={createInvoiceMutation.isPending} className="flex-1">
                   Clear
                 </Button>
                 <Button type="submit" loading={submitting} className="flex-1">

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { createProduct, updateProduct } from '../../features/products/productSlice';
+import { useCreateProduct, useUpdateProduct } from '../../hooks/useProducts';
 import Modal from '../ui/Modal';
 import Input from './Input';
 import Select from './Select';
@@ -52,7 +51,8 @@ const validate = (form) => {
  *   product  {object | null}  — null = Add mode, object = Edit mode
  */
 const ProductForm = ({ isOpen, onClose, product = null }) => {
-  const dispatch = useDispatch();
+  const createProductMutation = useCreateProduct();
+  const updateProductMutation = useUpdateProduct();
   const isEdit = Boolean(product);
 
   const [form, setForm] = useState(EMPTY_FORM);
@@ -121,12 +121,10 @@ const ProductForm = ({ isOpen, onClose, product = null }) => {
       if (isEdit) {
         // Edit: send as plain JSON (no new image) or multipart if image changed
         const payload = imageFile ? fd : { ...form };
-        const result = await dispatch(
-          updateProduct({ id: product._id, data: payload })
-        ).unwrap();
+        const result = await updateProductMutation.mutateAsync({ id: product._id, data: payload });
         toast.success(`"${result.product.name}" updated`);
       } else {
-        const result = await dispatch(createProduct(fd)).unwrap();
+        const result = await createProductMutation.mutateAsync(fd);
         toast.success(`"${result.product.name}" added`);
       }
       onClose();

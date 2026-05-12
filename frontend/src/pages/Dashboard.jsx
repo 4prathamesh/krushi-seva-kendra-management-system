@@ -1,26 +1,17 @@
-import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-// Dashboard stats now come from invoices (Order module removed)
-import { fetchDashboardStats } from '../features/invoices/invoiceSlice';
-import { fetchProducts } from '../features/products/productSlice';
+import { useDashboardStats } from '../hooks/useInvoices';
+import { useProducts } from '../hooks/useProducts';
 import Card from '../components/ui/Card';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 
 const Dashboard = () => {
-  const dispatch  = useDispatch();
   const navigate  = useNavigate();
 
-  // Dashboard stats live in invoices slice now
-  const { dashboard } = useSelector((s) => s.invoices);
-  const { items: products } = useSelector((s) => s.products);
-
-  useEffect(() => {
-    dispatch(fetchDashboardStats());
-    dispatch(fetchProducts({ limit: 100 }));
-  }, [dispatch]);
+  const { data: dashboard } = useDashboardStats();
+  const { data: productData } = useProducts({ limit: 100 });
+  const products = productData?.products || [];
 
   const categoryData = ['seed', 'fertilizer', 'pesticide', 'tool', 'other'].map((cat) => ({
     name:  cat.charAt(0).toUpperCase() + cat.slice(1),
